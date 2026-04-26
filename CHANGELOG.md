@@ -7,7 +7,61 @@ versioning theo [SemVer](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased] — branch `claude/auto-execution`
 
-(Đang ở W2)
+(Đang chuẩn bị W3 — ML/DL models)
+
+---
+
+## [0.2.0-w2] — `milestone-2-baselines` (2026-04-26)
+
+### Added (M2: Features V2 + Classical Baselines)
+
+#### Data layer
+- `src/data/merge.py` — outer-join 11 raw sources, ffill (no bfill), filter business days, output `data/interim/merged.parquet` (2,169 rows × 16 cols)
+
+#### Features V2 (108 features)
+- `src/features/technical.py` — SMA/EMA/RSI/MACD/Bollinger/ATR/Stochastic/realized vol/momentum/ROC
+- `src/features/calendar.py` — VN holidays (Tết âm 2018-2027), dow/month/quarter cyclical encoding, days_to_tet
+- `src/features/macro.py` — yield spread, USD z-gap, USD/VND change, realized vol, SJC/Gold ratio
+- `src/features/build.py` — pipeline: lags + returns + technical + calendar + macro + targets (h=1,5,20)
+- `src/features/sentiment.py` — STUB pipeline (PhoBERT/mDeBERTa zero-shot ready, scrape later)
+- Output: `data/processed/features_v2.parquet` (1,883 × 112), `features_v2_with_sentiment.parquet` (1,883 × 122)
+
+#### Models (9 classical)
+- `src/models/base.py` — `BaseForecaster` abstract interface
+- `src/models/classical.py`:
+  - **Tier 0 trivial**: NaiveForecaster (mode-A constant), SeasonalNaiveForecaster (cycle), RollingNaiveForecaster (mode-B shift)
+  - **Tier 1 statistical** (StatsForecast): AutoARIMA, AutoETS, AutoTheta, HistoricAverage
+  - **Prophet** (Meta) wrapper với cmdstanpy backend
+  - **MLForecastLGBM** (Nixtla + LightGBM) với auto lag features
+
+#### Training & evaluation
+- `src/training/trainer.py` — `evaluate_one_fold` mode-A protocol (single fit train, multi-step forecast, slice align cho horizon)
+- `src/evaluation/leaderboard.py` — aggregate per-model/horizon/fold metrics, save CSV + barplot
+- `scripts/run_classical_baselines.py` — entry CLI
+
+#### Tests (35 total, +10 new)
+- `tests/test_features.py`: 10 sanity tests (no leakage on technical/lag/return/target/calendar/macro)
+- VN holidays detection verified (Tết 2024 + 30/4 + 9/2 + Tết Dương)
+
+### Results — Classical leaderboard (5 walk-forward folds)
+| Horizon | Best mode-A MAPE | Mode-B floor | Best DA |
+|---|---|---|---|
+| h=1 | SeasonalNaive 2.91% | RollingNaive 0.33% | AutoETS 52.4% |
+| h=5 | SeasonalNaive 3.03% | RollingNaive 0.96% | AutoETS 50.2% |
+| h=20 | SeasonalNaive 3.49% | RollingNaive 2.67% | AutoETS 56.3% |
+
+→ **Đã đạt target proposal 4-5% MAPE** ngay từ classical baselines.
+
+### Fixed
+- MLForecast freq mismatch (B vs VN holidays) → chuyển sang integer index
+- SJC scraper webgia working sau refresh
+
+### Known limitations
+- Multi-horizon mode-A: y_pred[i] là (i+1)-step-ahead chứ không phải fixed h-step → "horizon" mang ý nghĩa "min h" — sẽ chuyển sang rolling-origin trong W3 cho ML models
+- Sentiment vẫn là STUB zeros (chưa scrape news)
+- CPI VN data missing (FRED code 404)
+
+---
 
 ---
 

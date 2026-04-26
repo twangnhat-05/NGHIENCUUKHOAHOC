@@ -63,6 +63,27 @@ git reset --hard milestone-N
 
 ### 20:50 — M1 closure
 - Update MONITORING.md, CHANGELOG.md
-- Sắp commit + tag `milestone-1-foundation` + push remote
+- Commit + tag `milestone-1-foundation` + push remote ✅
+
+### 21:00 — M2 (W2) start: Features V2 + Sentiment + Classical
+- Install: statsforecast, prophet, mlforecast, lightgbm, neuralprophet (background ~3 phút)
+  - Prophet downgraded numpy 2.1 → 1.26.4 (compatibility với cmdstanpy)
+- W2.2 src/data/merge.py: 11 raw sources → 2169 business-day rows
+  - Bug found: BTC trade 7/7 → weekend pollute → filter to business days
+- W2.3 src/features/{technical,calendar,macro,build}.py: 108 features từ 16 raw cols
+  - Calendar: VN holidays (cố định + Tết âm lookup table 2018-2027)
+  - Macro: yield spread, USD z-gap, USD/VND change, realized vol
+- W2.4 src/features/sentiment.py: stub pipeline (PhoBERT-ready, scrape defer)
+- W2.5 src/models/{base,classical}.py: 9 models (3 trivial + 4 statsforecast + Prophet + MLForecast_LGBM)
+- W2.6 src/training/trainer.py + src/evaluation/leaderboard.py:
+  - Mode-A evaluation: single fit train, n_val-step forecast, align cho horizon
+  - Bug fix: Naive shifted y_observed → wrong; sửa thành mode-A constant
+- W2.7 Run baselines: 135 records collected (9 × 5 folds × 3 horizons)
+  - Output: reports/leaderboard/classical_full_{long,summary}.csv + 12 plots PNG
+- Tests: 35/35 PASS (12 CV no-leakage + 13 metrics + 10 features)
+
+### 22:35 — M2 closure
+- Sắp commit + tag `milestone-2-baselines` + push
+
 
 
