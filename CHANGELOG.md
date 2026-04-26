@@ -7,7 +7,68 @@ versioning theo [SemVer](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased] — branch `claude/auto-execution`
 
-(Đang chuẩn bị W5 — Streamlit dashboard + paper writing)
+(All milestones completed — ready for user merge)
+
+---
+
+## [0.5.0-w5] — `milestone-5-delivery` (2026-04-27)
+
+### Added (M5: Dashboard + API + Paper + Reproducibility)
+
+#### Streamlit dashboard
+- `app/streamlit_app.py`:
+  - 4 tabs: Overview, Leaderboard, Predictions, XAI/SHAP
+  - Plotly interactive charts với date filter, model multiselect
+  - Live ElasticNet forecast với MAPE on demand
+  - SHAP top-20 features + ACI conformal PI image
+  - Cached data loaders (TTL 1h)
+  - HTTP 200 verified
+  - Deploy ready: Streamlit Community Cloud (push GitHub → share.streamlit.io)
+
+#### FastAPI server
+- `app/api/main.py`:
+  - 5 endpoints: `/`, `/predict?h={1,5,20}`, `/history?days=N`, `/leaderboard?h=N&top=K`, `/shap`
+  - CORS enabled, OpenAPI docs at `/docs`
+  - Cached features + lazy model loading
+  - Smoke test: `predict(h=1)` returns SJC 171.6 → 170.3 (-0.76%) at 2026-03-27
+  - Deploy ready: Render free / HF Spaces / local uvicorn
+
+#### Reproducibility
+- `scripts/reproduce_all.sh` (Bash for Linux/Mac/WSL)
+- `scripts/reproduce_all.bat` (Windows native)
+- Both run end-to-end pipeline: refresh → merge → features → 4 model families → leaderboard → XAI/conformal → tests
+- Estimated: ~70 phút trên CPU, < 30 phút nếu skip DL benchmark
+
+#### Reports
+- `reports/paper/tdtu_vi/report.md`:
+  - Vietnamese, ~14 pages, 8 sections + 3 appendices
+  - Format Markdown — convert sang Word DOCX dễ dàng (pandoc / Word import)
+  - Auto-filled với tất cả numerical results từ leaderboard
+  - 17 references chính (Vietnamese + international gold/foundation papers)
+- `reports/paper/ieee_en/main.tex`:
+  - English IEEE 2-column conference format (compile-ready với pdflatex)
+  - 7 sections + leaderboard tables + bib.bib
+  - Submission-ready cho RIVF/SoICT/KSE/ICONIP
+
+### Final stats (M5)
+- Total tests: **47/47 PASS**
+- Total models benchmarked: **24** (9 classical + 7 ML + 7 DL + 1 foundation)
+- Total records: **360** (24 × 5 folds × 3 horizons)
+- Friedman p < 0.001 cho cả 3 horizons
+- Best MAPE: **0.63%** (Ridge, h=1)
+- Foundation zero-shot: **3.07%** (Chronos-Bolt, h=1)
+- Code lines: ~3500 trong src/ + ~800 trong scripts/ + ~600 trong app/
+- Total git tags: pre-claude-v0 + 5 milestones
+- Deploy ready: Streamlit + FastAPI
+
+### Deferred (optional future work)
+- Real sentiment scraping (CafeF/VnExpress + PhoBERT) — pipeline ready
+- Streamlit Cloud deploy (cần user push branch + connect)
+- TFT + iTransformer GPU benchmark trên Colab
+- TTM (IBM) + TimesFM + Lag-Llama additional foundation models
+- Optuna full tuning (linear models đã thắng with defaults)
+- CPI VN data từ GSO (FRED code 404)
+- Convert tdtu_vi/report.md → report.docx (user dùng pandoc hoặc Word import)
 
 ---
 

@@ -127,7 +127,20 @@ git reset --hard milestone-N
 - Friedman: p < 0.001 cho h=1/5/20 (strong rejection — models differ)
 
 ### 00:38 — M4 closure
-- Sắp commit + tag `milestone-4-frontier` + push
+- Commit + tag `milestone-4-frontier` + push ✅
+
+### 00:45 — M5 (W5) start: Dashboard + Paper + Reproducibility
+- Install: streamlit 1.56, fastapi, uvicorn
+- W5.1 Streamlit app: 4 tabs (overview/leaderboard/predict/xai), HTTP 200 verified
+- W5.2 FastAPI: 5 endpoints, predict(h=1) returns 171.6→170.3 (-0.76%)
+- W5.3 Reproducibility: scripts/reproduce_all.{sh,bat}
+- W5.4 TDTU report: 14-page Vietnamese Markdown với auto-filled results
+- W5.5 IEEE paper: English LaTeX 2-column + bib.bib, submission-ready
+- W5.6 Final QC: 47/47 tests pass, no regression
+
+### 01:00 — M5 closure (FINAL DELIVERY)
+- Sắp commit + tag `milestone-5-delivery` + push
+- Project COMPLETE — sẵn sàng merge vào main
 
 
 
