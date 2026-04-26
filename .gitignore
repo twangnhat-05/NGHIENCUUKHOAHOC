@@ -29,6 +29,7 @@ env/
 # ============== ML / Data ==============
 mlruns/
 mlartifacts/
+lightning_logs/
 *.h5
 *.pkl
 *.joblib
