@@ -20,12 +20,22 @@ git reset --hard milestone-N
 ## 2026-04-26
 
 ### 19:45 — STEP 6/7: Backup + Infra init
-- ✅ `git init -b main` (D:\WangNhat\Study\NCKH)
-- ✅ Tạo `.gitignore`
-- ✅ Tạo `MONITORING.md`, `CLAUDE_EXECUTION_LOG.md`
-- ⏳ Sắp: baseline commit + tag `pre-claude-v0` + branch `claude/auto-execution`
-- ⏳ Sắp: `.claude/skills/INDEX.md`
+- ✅ `git init -b main`
+- ✅ Tạo `.gitignore`, `MONITORING.md`, `CLAUDE_EXECUTION_LOG.md`, `.claude/skills/INDEX.md`
+- ✅ Baseline commit `b9a059e`
+- ✅ Cleanup commit `3a63995` (untrack settings.local.json)
+
+### 19:55 — STEP 6.5: Remote setup
+- ✅ Set remote `origin` → `https://github.com/twangnhat-05/NGHIENCUUKHOAHOC.git`
+  (initial chọn `Twangnhatt/NCKH` bị 403; user chuyển sang account `twangnhat-05`)
+- ✅ Rebase `--allow-unrelated-histories` để giữ README.md từ remote
+- ✅ Push `main` (fast-forward) — local ahead by 2 commits
+- ✅ Tạo + push tag `pre-claude-v0` (= commit `3a63995`) → ROLLBACK POINT
+
+### 20:00 — Branch isolation
+- ✅ Tạo + switch sang branch `claude/auto-execution`
+- Mọi thay đổi tiếp theo commit lên branch này, KHÔNG đụng `main` cho tới khi user merge.
 
 ### Permissions granted
-- User trả lời "GRANT ALL" → full autonomy theo permission template (chỉ trừ destructive ops cần CONFIRM riêng).
+- User trả lời "GRANT ALL" → full autonomy theo permission template (destructive ops vẫn cần CONFIRM riêng).
 
