@@ -1,0 +1,20 @@
+# NCKH - Dự báo giá vàng Việt Nam
+# Thu thập dữ liệu: yfinance, vnstock (VN-Index), web scraping, lãi suất FRED
+yfinance>=0.2.36
+# VN-Index: vnstock (VCI) lấy chỉ số VNINDEX; fallback yfinance (VNM) nếu thiếu
+vnstock>=3.2.0
+# Lãi suất: dùng requests tải trực tiếp từ FRED, không cần pandas-datareader
+pandas>=2.0.0
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+lxml>=5.0.0
+# EDA và phân tích chuỗi thời gian
+numpy>=1.24.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+statsmodels>=0.14.0
+# Model Training (tháng 12 - baseline + AI)
+scikit-learn>=1.3.0
+xgboost>=2.0.0
+# LSTM (Deep Learning - tháng 1)
+tensorflow>=2.14.0

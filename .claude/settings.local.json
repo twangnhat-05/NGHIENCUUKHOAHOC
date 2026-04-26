@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git --version)",
+      "Bash(pip --version)",
+      "Bash(git init *)",
+      "Bash(git config *)",
+      "Bash(rm -rf __pycache__)",
+      "Bash(git add *)"
+    ]
+  }
+}

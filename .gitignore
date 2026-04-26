@@ -1,0 +1,61 @@
+# ============== Python ==============
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# ============== Jupyter ==============
+.ipynb_checkpoints/
+*.ipynb_meta
+
+# ============== IDE ==============
+.vscode/
+.idea/
+*.swp
+*.bak
+.DS_Store
+
+# ============== ML / Data ==============
+mlruns/
+mlartifacts/
+*.h5
+*.pkl
+*.joblib
+*.pt
+*.ckpt
+checkpoints/
+wandb/
+
+# Data files: KEEP raw + processed snapshots, ignore large temp/intermediate
+data/raw/cache/
+data/interim/
+data/external/cache/
+*.parquet.tmp
+
+# ============== Reports & Outputs ==============
+output/tmp/
+reports/_build/
+
+# ============== Secrets ==============
+.env
+.env.local
+*.secret
+secrets/
+
+# ============== Claude local settings ==============
+.claude/settings.local.json
+
+# ============== OS ==============
+Thumbs.db
+desktop.ini
