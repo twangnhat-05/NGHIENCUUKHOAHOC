@@ -79,20 +79,34 @@ def fetch_yfinance(
     end_date: str,
     out_dir: Path,
     retries: int = 3,
-    delay: float = 1.0,
+    delay: float = 2.0,
 ) -> bool:
-    """Tải 1 ticker từ yfinance, lưu CSV. Trả về True nếu OK."""
+    """Tải 1 ticker từ yfinance, lưu CSV. Trả về True nếu OK.
+
+    Dùng yf.download() (robust hơn Ticker.history với yfinance >=1.0)
+    + backoff giữa các retry để tránh rate-limit từ Yahoo.
+    """
     import yfinance as yf  # lazy import
 
     for attempt in range(1, retries + 1):
         try:
-            obj = yf.Ticker(ticker)
-            df = obj.history(start=start_date, end=end_date, auto_adjust=True)
-            if df.empty or len(df) < 10:
+            df = yf.download(
+                ticker,
+                start=start_date,
+                end=end_date,
+                auto_adjust=True,
+                progress=False,
+                threads=False,
+            )
+            if df is None or df.empty or len(df) < 10:
                 log.warning(f"{ticker} ({name}): rỗng/thiếu dữ liệu (attempt {attempt})")
-                time.sleep(delay)
+                time.sleep(delay * attempt)  # exponential-ish backoff
                 continue
-            df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
+            # yf.download trả về MultiIndex columns nếu nhiều ticker; flatten cho 1 ticker
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.droplevel(1)
+            keep = [c for c in ["Open", "High", "Low", "Close", "Volume"] if c in df.columns]
+            df = df[keep].copy()
             df.index.name = "Date"
             out_path = out_dir / f"{name}_ohlcv.csv"
             df.to_csv(out_path, encoding="utf-8-sig")
@@ -100,7 +114,7 @@ def fetch_yfinance(
             return True
         except Exception as e:
             log.warning(f"{ticker} attempt {attempt}/{retries}: {e}")
-            time.sleep(delay)
+            time.sleep(delay * attempt)
     log.error(f"FAIL {ticker} ({name}) sau {retries} attempts")
     return False
 
@@ -278,13 +292,14 @@ def fetch_all_full(config_path: str = "configs/data.yaml") -> dict[str, bool]:
     end = datetime.now().strftime("%Y-%m-%d") if cfg["end_date"] == "today" else cfg["end_date"]
 
     results: dict[str, bool] = {}
-    # yfinance
-    for ticker, name in cfg["yfinance"].items():
-        if ticker in ("retry", "delay_seconds"):
+    # yfinance — config dict: {friendly_name: ticker_symbol}
+    yf_cfg = cfg["yfinance"]
+    for name, ticker in yf_cfg.items():
+        if name in ("retry", "delay_seconds"):
             continue
         results[name] = fetch_yfinance(
             ticker=ticker, name=name, start_date=start, end_date=end, out_dir=out_dir,
-            retries=cfg["yfinance"]["retry"], delay=cfg["yfinance"]["delay_seconds"],
+            retries=yf_cfg["retry"], delay=yf_cfg["delay_seconds"],
         )
     # vnstock VN-Index
     results["VN_Index"] = fetch_vnindex_vnstock(start, end, out_dir)

@@ -39,3 +39,30 @@ git reset --hard milestone-N
 ### Permissions granted
 - User trả lời "GRANT ALL" → full autonomy theo permission template (destructive ops vẫn cần CONFIRM riêng).
 
+### 20:15 — Gate 2 Clarification
+- 5 câu hỏi gửi user; user trả lời "ALL ⭐" + research thêm Q3 (SOTA models 2025-2026)
+- Spawn research agent (general-purpose, background) → trả về SOTA stack: Chronos-Bolt, TTM, TimesFM, Lag-Llama, PatchTST, iTransformer, N-HiTS, TFT, TimeMixer
+- Note: WebSearch denied trong sub-agent → research dựa trên training cutoff (Jan 2026); user cần verify HF model cards trước W4
+
+### 20:25 — Gate 3 Master Architecture
+- `ARCHITECTURE.md` v0.1 commit `da9d5db` — 5-tier model lineup, walk-forward CV, 5-week roadmap
+- User confirm: APPROVE + có account Colab cho TFT/iTransformer
+
+### 20:30 — M1 (W1) Foundation execution
+- Cookiecutter folder structure (src/{...}, configs/, tests/, notebooks/, app/, reports/)
+- Migrate raw → data/raw/, legacy → src/legacy/ (frozen)
+- Project meta: requirements.txt + dev pinned, pyproject.toml (ruff/black/pytest), README, LICENSE, CITATION
+- Configs: data.yaml, cv.yaml, features.yaml (no hardcoded constants; outliers.fit_on=train_fold)
+- src skeleton: utils, data.{schema,fetch,refresh}, training.cv (WalkForwardCV), evaluation.metrics
+- Install: pyarrow, pytest, vnstock, pandas-datareader (others đã có sẵn)
+- Bug fix: data.yaml.yfinance dict key/value swap → loop iterate ngược
+- Bug fix: yfinance API → chuyển sang `yf.download()` + backoff
+- Refresh tất cả nguồn → 2026-04-24/25 (8 nguồn fresh, +3 nguồn mới: USD/VND, GLD, BTC, FRED DTWEXBGS, FRED DGS10)
+- Tests: 25/25 pass (12 no_leakage + 13 metrics)
+- Skill candidates đã nhận diện (sẽ tạo W2 khi pattern lặp): `data-fetcher` đã ngầm tồn tại trong fetch.py
+
+### 20:50 — M1 closure
+- Update MONITORING.md, CHANGELOG.md
+- Sắp commit + tag `milestone-1-foundation` + push remote
+
+

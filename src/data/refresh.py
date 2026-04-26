@@ -52,10 +52,11 @@ def refresh_delta(config_path: str = "configs/data.yaml", skip: tuple[str, ...] 
     today_str = today.strftime("%Y-%m-%d")
     summary: dict[str, str] = {}
 
-    # ----- yfinance: full re-download for those nguồn (yfinance fast, idempotent) -----
+    # ----- yfinance: config dict {friendly_name: ticker_symbol} -----
     if "yfinance" not in skip:
-        for ticker, name in cfg["yfinance"].items():
-            if ticker in ("retry", "delay_seconds"):
+        yf_cfg = cfg["yfinance"]
+        for name, ticker in yf_cfg.items():
+            if name in ("retry", "delay_seconds"):
                 continue
             last = _last_date_in(out_dir / f"{name}_ohlcv.csv")
             if last is not None and last.date() >= today - timedelta(days=1):
@@ -64,7 +65,7 @@ def refresh_delta(config_path: str = "configs/data.yaml", skip: tuple[str, ...] 
             ok = fetch_yfinance(
                 ticker=ticker, name=name,
                 start_date=cfg["start_date"], end_date=today_str, out_dir=out_dir,
-                retries=cfg["yfinance"]["retry"], delay=cfg["yfinance"]["delay_seconds"],
+                retries=yf_cfg["retry"], delay=yf_cfg["delay_seconds"],
             )
             new_last = _last_date_in(out_dir / f"{name}_ohlcv.csv")
             summary[name] = f"refreshed → {new_last.date() if new_last is not None else 'FAIL'}" if ok else "FAIL"

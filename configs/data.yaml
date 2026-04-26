@@ -14,16 +14,17 @@ paths:
   processed_dir: "data/processed"
   external_dir: "data/external"
 
-# yfinance tickers
+# yfinance tickers — friendly_name: ticker_symbol
+# friendly_name dùng làm prefix file: data/raw/<friendly_name>_ohlcv.csv
 yfinance:
   Gold_Futures: "GC=F"
-  USD_Index_yf: "DX-Y.NYB"
-  Oil_WTI: "CL=F"
-  USD_VND: "VND=X"
-  GLD_ETF: "GLD"
-  Bitcoin: "BTC-USD"
+  USD_Index:    "DX-Y.NYB"   # Nicholas DJ; có alternative DTWEXBGS từ FRED (official)
+  Oil_WTI:      "CL=F"
+  USD_VND:      "VND=X"
+  GLD:          "GLD"
+  BTC:          "BTC-USD"
   retry: 3
-  delay_seconds: 1.0
+  delay_seconds: 2.5         # né rate-limit Yahoo (yfinance 1.x)
 
 # vnstock (VN-Index VNINDEX from VCI)
 vnstock:
@@ -34,7 +35,9 @@ vnstock:
 fred:
   FEDFUNDS:    "FEDFUNDS"          # Fed funds rate (monthly)
   DTWEXBGS:    "DTWEXBGS"          # USD broad index (daily, official)
-  CPI_VN:      "CPALTT01VNQ657N"   # CPI Vietnam (quarterly)
+  # CPI_VN: code FRED `CPALTT01VNQ657N` đã bị FRED gỡ tháng 1/2026 (404).
+  # Nếu cần CPI VN thật, lấy thủ công từ Tổng cục Thống kê (gso.gov.vn) → data/external/cpi_vn.csv
+  # CPI_VN:      "VNMCPIALLMINMEI"
   TenY_Treasury: "DGS10"           # 10y treasury
 
 # SBV (manual CSV input — optional)

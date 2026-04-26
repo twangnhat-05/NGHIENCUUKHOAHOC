@@ -1,52 +1,66 @@
 # 🎯 PROJECT HEALTH DASHBOARD
 
-> **Auto-updated by Claude Architect** — last refresh: 2026-04-26 (init)
+> **Auto-updated by Claude Architect** — last refresh: 2026-04-26 (after M1)
 
 ## 📊 CODE QUALITY
-- Test coverage: **0%** (target ≥ 70%)
-- Lint score: **n/a** (ruff/black chưa cài)
-- Type hints coverage: **~5%**
+- Test coverage: **48% / 25 tests** (no_leakage gates: 12/12 ✅; metrics: 13/13 ✅) — target ≥ 70% by M3
+- Lint: pyproject.toml configured (ruff + black) — chưa chạy lint scan đầu
+- Type hints coverage: **~50%** trong `src/` (strict trên public APIs)
 - TODO/FIXME count: **0**
-- Cyclomatic complexity: **n/a**
+- Cyclomatic complexity: nhỏ (≤ 8 per function)
 
 ## 🧪 EXPERIMENT TRACKING
-- Models trained (legacy, before Claude): **5** — Naive, Linear Regression, Random Forest, XGBoost, LSTM
-- Best MAPE so far (legacy, single 80/20 split): **chưa được audit lại**
-- Best directional accuracy: **chưa đo**
-- Statistical tests: **❌ chưa có Diebold-Mariano**
-- Latest leaderboard: `output/` (legacy plots, chưa systematic)
+- Models trained (legacy, before refactor): **5** (frozen ở `src/legacy/`)
+- Models trained (new pipeline): **0** (sẽ bắt đầu W2)
+- Best MAPE: chưa có (W2 baselines first)
+- Best directional accuracy: chưa đo
+- Statistical tests: chưa có (W4)
+- Latest leaderboard: chưa có
 
-## 📦 DATA HEALTH
-- Last data refresh: ~2026-01-31 (≈ 3 tháng trước — **cần refresh**)
-- Data drift detected: **chưa đo**
-- Missing values: **0%** sau ffill
-- Outliers: winsorized 1%-99% (⚠️ leakage)
-- Schema match: ✅ stable
+## 📦 DATA HEALTH (sau refresh 2026-04-26)
+| Source | Rows | Latest | Status |
+|---|---|---|---|
+| SJC gold | 2,015 | 2026-04-24 | ✅ Fresh (51 rows new) |
+| Gold Futures (GC=F) | 2,090 | 2026-04-24 | ✅ |
+| USD Index (DX-Y.NYB) | 2,091 | 2026-04-24 | ✅ |
+| Oil WTI (CL=F) | 2,091 | 2026-04-24 | ✅ |
+| USD/VND (VND=X) | 2,164 | 2026-04-24 | ✅ NEW |
+| GLD ETF | 2,089 | 2026-04-24 | ✅ NEW |
+| BTC-USD | 3,037 | 2026-04-25 | ✅ NEW |
+| VN-Index (vnstock VCI) | 2,172 | 2026-04-24 | ✅ |
+| FED Funds (FRED) | 99 | 2026-03-01 | ✅ Monthly |
+| USD Broad Index (FRED DTWEXBGS) | 2,069 | 2026-04-17 | ✅ NEW |
+| 10Y Treasury (FRED DGS10) | 2,077 | 2026-04-23 | ✅ NEW |
+| ❌ CPI VN (FRED CPALTT01VNQ657N) | — | — | 404 — code đã bị FRED gỡ; phải lấy từ GSO |
+
+- Data drift detected: **chưa đo** (W2)
+- Missing values: 0% (sau ffill)
+- Outliers: **đã thiết kế fit-on-train-fold** trong `configs/features.yaml` (sẽ dùng W2)
 
 ## ⚙️ INFRA & RESOURCES
-- Disk usage (project): ~3MB code + ~2MB data + ~2MB output
-- Memory peak: n/a
-- Total training time: n/a
-- Free tier quota left: 100% (chưa dùng)
+- Disk usage (project): ~5MB code + ~3MB data raw
+- Memory peak: <500MB (data load)
+- Total training time: 0 phút
+- Free tier quota left: 100%
 
 ## 🤖 AI ORCHESTRATION
-- Total dispatches: Opus 0 | Sonnet 0 | Haiku 0
-- Token consumption (estimated): 0
-- Skills created: **0** (xem `.claude/skills/INDEX.md`)
+- Total dispatches: Opus 1 (research SOTA) | Sonnet 0 | Haiku 0
+- Token consumption (estimated): ~25k tokens
+- Skills created: **0** (planning to auto-create khi pattern lặp ≥ 2x)
 - Skills reused: 0
-- Failed dispatches: 0
 
-## 🚨 ALERTS (active)
-- 🔴 **DATA_LEAKAGE_WINSORIZE**: `eda_merge_analysis.handle_outliers()` tính percentile trên toàn bộ dataset (bao gồm test) — phải fix
-- 🔴 **NO_WALK_FORWARD_CV**: chỉ one-shot 80/20 — kết quả không robust
-- 🔴 **MISSING_MODELS**: thiếu ARIMA/SARIMA, Prophet, SVM, Transformer (proposal yêu cầu)
-- 🟡 **NO_DM_TEST**: thiếu Diebold-Mariano để so sánh statistical significance
-- 🟡 **NO_PROJECT_STRUCTURE**: scripts flat, không có src/, tests/, configs/
-- 🟡 **STALE_DATA**: SJC dữ liệu tới 2026-01, cần refresh tới 04-2026
-- 🟡 **NO_XAI_FULL**: chỉ SHAP cho XGB, thiếu LIME, thiếu RF/LSTM
+## 🚨 ALERTS (sau M1)
+- ✅ **DATA_LEAKAGE_WINSORIZE**: configs/features.yaml.outliers.fit_on=`train_fold`; sẽ enforce trong W2 build_features
+- ✅ **NO_WALK_FORWARD_CV**: `src/training/cv.WalkForwardCV` đã build + 12 no-leakage tests pass
+- 🔴 **MISSING_MODELS**: thiếu ARIMA/SARIMA, Prophet, SVM, Transformer, foundation models (sẽ làm W2-W4)
+- 🟡 **NO_DM_TEST**: chưa có (W3-W4)
+- ✅ **NO_PROJECT_STRUCTURE**: cookiecutter structure hoàn tất, configs YAML đã có
+- ✅ **STALE_DATA**: refresh tới 2026-04-24/25
+- 🟡 **NO_XAI_FULL**: W4
+- 🟡 **CPI_VN_404**: cần user thêm tay từ gso.gov.vn → data/external/cpi_vn.csv (W2)
 
 ## 🔖 GIT STATE
-- Current branch: `main` (về sau sẽ work trên `claude/auto-execution`)
-- Latest commit: (sắp baseline)
-- Latest tag: (sắp `pre-claude-v0`)
-- Dirty files: tất cả (chưa commit lần đầu)
+- Current branch: `claude/auto-execution`
+- Local commits trên branch: ~5 (xem `git log`)
+- Latest tag: `pre-claude-v0` (rollback point) → sắp tag `milestone-1-foundation`
+- Remote `origin` = github.com/twangnhat-05/NGHIENCUUKHOAHOC
