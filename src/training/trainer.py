@@ -18,6 +18,66 @@ from src.utils.logging import get_logger
 log = get_logger(__name__)
 
 
+def evaluate_ml_one_fold(
+    model: BaseForecaster,
+    train_df: pd.DataFrame,
+    val_df: pd.DataFrame,
+    horizon: int,
+    target_col: str = "SJC_ban_ra",
+) -> dict:
+    """Evaluation cho ML models (mode-B per-row using engineered features).
+
+    Khác với mode-A: model predict cho mỗi val row dùng features tại row đó,
+    so với y_h{horizon} cùng row.
+    """
+    from src.models.ml import _MLBaseWrapper  # noqa: F401 (chỉ để type check)
+
+    # Đảm bảo target column
+    target_h_col = f"y_h{horizon}"
+    if target_h_col not in val_df.columns:
+        val = val_df.copy()
+        val[target_h_col] = val[target_col].shift(-horizon)
+    else:
+        val = val_df.copy()
+
+    # Drop rows trong val có NaN target (last `horizon` rows)
+    val_eval = val.dropna(subset=[target_h_col]).copy()
+    if len(val_eval) < 5:
+        log.warning(f"{model.name} val < 5 valid rows cho h={horizon}")
+        return {}
+
+    # ML model: horizon đã bake vào constructor; trainer chỉ pass through
+    if hasattr(model, "horizon"):
+        model.horizon = horizon  # đảm bảo đúng horizon
+
+    t0 = time.time()
+    try:
+        model.fit(train_df, target_col=target_col)
+    except Exception as e:
+        log.error(f"{model.name} fit failed: {e}")
+        return {}
+    fit_time = time.time() - t0
+
+    t0 = time.time()
+    try:
+        y_pred = model.predict(val_eval, h=horizon)
+    except Exception as e:
+        log.error(f"{model.name} predict failed: {e}")
+        return {}
+    pred_time = time.time() - t0
+    y_pred = np.asarray(y_pred)[: len(val_eval)]
+
+    y_true = val_eval[target_h_col].to_numpy()
+    y_train = train_df[target_col].to_numpy()
+    y_prev = val_eval[target_col].to_numpy()
+
+    metrics = summary(y_true, y_pred, y_train=y_train, y_prev=y_prev, seasonal_period=5)
+    metrics["fit_seconds"] = fit_time
+    metrics["pred_seconds"] = pred_time
+    metrics["n_eval"] = len(y_true)
+    return metrics
+
+
 def evaluate_one_fold(
     model: BaseForecaster,
     train_df: pd.DataFrame,
@@ -105,12 +165,12 @@ def run_walk_forward(
     horizons: Iterable[int],
     target_col: str = "SJC_ban_ra",
 ) -> list[dict]:
-    """Run mọi (model × horizon × fold). Trả về list of records."""
+    """Run mọi (model × horizon × fold). Tự dispatch ML/classical theo `model.use_features`."""
     results = []
     folds = list(cv.split(df))
-    log.info(f"{len(folds)} folds × {len(list(horizons))} horizons × {len(list(models))} models")
     horizons = list(horizons)
     models = list(models)
+    log.info(f"{len(folds)} folds × {len(horizons)} horizons × {len(models)} models")
 
     for fold in folds:
         train_df, val_df = cv.get_train_val(df, fold)
@@ -119,7 +179,11 @@ def run_walk_forward(
         for h in horizons:
             for model in models:
                 t0 = time.time()
-                metrics = evaluate_one_fold(model, train_df, val_df, h, target_col)
+                # Dispatch
+                if getattr(model, "use_features", False):
+                    metrics = evaluate_ml_one_fold(model, train_df, val_df, h, target_col)
+                else:
+                    metrics = evaluate_one_fold(model, train_df, val_df, h, target_col)
                 if not metrics:
                     continue
                 results.append({
@@ -128,8 +192,8 @@ def run_walk_forward(
                     "fold_id": fold.fold_id,
                     "metrics": metrics,
                 })
-                log.info(f"  {model.name:18s} h={h:2d} → MAPE={metrics.get('MAPE', float('nan')):.2f}% "
-                         f"RMSE={metrics.get('RMSE', float('nan')):.4f} "
+                log.info(f"  {model.name:22s} h={h:2d} → MAPE={metrics.get('MAPE', float('nan')):6.2f}% "
+                         f"RMSE={metrics.get('RMSE', float('nan')):7.4f} "
                          f"DA={metrics.get('DA', float('nan')):5.1f}%  "
                          f"({time.time()-t0:.1f}s)")
     return results
