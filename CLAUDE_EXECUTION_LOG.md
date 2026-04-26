@@ -105,8 +105,29 @@ git reset --hard milestone-N
 - Best DL: TSMixer (3.0% MAPE h=1) — MLP-mixing > Transformer
 
 ### 00:20 — M3 closure
-- Update MONITORING.md, CHANGELOG.md
-- Sắp commit + tag `milestone-3-models` + push
+- Commit + tag `milestone-3-models` + push ✅
+
+## 2026-04-27
+
+### 00:25 — M4 (W4) start: Foundation + Ensemble + Conformal + XAI
+- Install: chronos-forecasting 2.2.2, mapie 1.3.0, captum 0.9.0, shap 0.51.0
+- W4.2 src/models/foundation.py:
+  - ChronosBoltForecaster + TTMForecaster wrappers
+  - API fix: Chronos-Bolt 2.x dùng `predict_quantiles(context, prediction_length, quantile_levels)`
+  - Smoke test Chronos-Bolt h=1: MAPE 0.65% (parity với Ridge 0.63%)
+- W4.3 Run foundation full benchmark (15 records, ~5 phút):
+  - Chronos-Bolt h=1=3.07%, h=5=3.20%, h=20=3.65% averaged across 5 folds
+- W4.4 src/models/ensemble.py: weighted/inverse_rmse/median ensemble
+- W4.5 src/evaluation/conformal.py: split conformal + ACI (Gibbs & Candès 2021)
+- W4.6 src/xai/{shap_utils,attention}.py: TreeSHAP + Captum IG + attention rollout
+- W4 demo (run_xai_conformal_demo.py):
+  - SHAP top-20 cho LightGBM: lag features dominate, macro contribute
+  - ACI ElasticNet h=1 last fold (2024 rally): 83% coverage @ alpha=0.10
+- Combined v2 leaderboard: 24 models × 5 folds × 3 horizons = 360 records
+- Friedman: p < 0.001 cho h=1/5/20 (strong rejection — models differ)
+
+### 00:38 — M4 closure
+- Sắp commit + tag `milestone-4-frontier` + push
 
 
 

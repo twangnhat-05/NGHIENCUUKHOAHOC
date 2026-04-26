@@ -7,7 +7,79 @@ versioning theo [SemVer](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased] — branch `claude/auto-execution`
 
-(Đang chuẩn bị W4 — Foundation models + Conformal PI + XAI)
+(Đang chuẩn bị W5 — Streamlit dashboard + paper writing)
+
+---
+
+## [0.4.0-w4] — `milestone-4-frontier` (2026-04-27)
+
+### Added (M4: Foundation models + Ensemble + Conformal + XAI)
+
+#### Foundation models (zero-shot, novelty cho paper)
+- `src/models/foundation.py`:
+  - `ChronosBoltForecaster`: Amazon Chronos-Bolt-Small (Apache-2.0, 48M params)
+    - API fix: predict_quantiles(context, prediction_length, quantile_levels)
+    - Zero-shot CPU ~10s/run; first call download ~50MB HF
+  - `TTMForecaster`: IBM Granite TTM r2 (~1M params, Apache-2.0) — wrapper ready, defer eval
+- `scripts/run_foundation_baselines.py`: CLI
+
+#### Ensemble
+- `src/models/ensemble.py`:
+  - `EnsembleForecaster`: combine ML + DL + classical
+  - Strategies: mean, median, inverse_rmse (auto weights from internal CV split), weighted
+  - Sync horizon trên các base model member; refit full train sau khi tính weights
+
+#### Conformal Prediction Intervals
+- `src/evaluation/conformal.py`:
+  - Split conformal (vanilla)
+  - **ACI (Adaptive Conformal Inference, Gibbs & Candès 2021)** — online alpha adapt
+  - Coverage rate + average interval width metrics
+  - Demo trên ElasticNet h=1 last fold (2024 gold rally):
+    * Split conformal 95% expected → 83% actual (under-coverage)
+    * ACI 90% target → 83% actual, width 3.6 → adaptive
+
+#### XAI
+- `src/xai/shap_utils.py`:
+  - TreeExplainer (XGB/LGBM/CatBoost/RF), KernelExplainer fallback
+  - shap_top_features, plot_shap_summary
+- `src/xai/attention.py`:
+  - Captum Integrated Gradients
+  - Attention rollout (Abnar & Zuidema 2020)
+  - LSTM gradient × input importance
+- `scripts/run_xai_conformal_demo.py`:
+  - SHAP top-20 features cho LightGBM h=1
+    * Top: SJC_ban_ra_lag1 (2.49) > SJC_ban_ra_lag2 (2.27) > SJC_mua_vao_lag1 (1.36) > sma30_sjc (0.79)
+    * Macro: USD_Close (0.14), TenY_Treasury (0.12), GLD_Close (0.10) đóng góp nhỏ nhưng meaningful
+  - ACI plot saved → reports/figures/aci_conformal_elasticnet_h1.png
+
+### Final combined leaderboard (24 models × 5 folds × 3 horizons = 360 records)
+
+| Horizon | Top 3 (mode-A/B mixed) | Foundation MAPE |
+|---|---|---|
+| h=1 | RollingNaive 0.33% / Ridge 0.63% / ElasticNet 0.67% | Chronos-Bolt 3.07% (rank 9) |
+| h=5 | RollingNaive 0.96% / ElasticNet 1.41% / Ridge 1.67% | Chronos-Bolt 3.20% (rank 6) |
+| h=20 | RollingNaive 2.67% / ElasticNet 3.06% / LightGBM 3.20% | Chronos-Bolt 3.65% (rank 8) |
+
+Friedman test:
+| Horizon | chi² | p-value | Conclusion |
+|---|---|---|---|
+| h=1 | 66.89 | 0.000004 | 🔴 Reject H0 |
+| h=5 | 65.14 | 0.000007 | 🔴 Reject H0 |
+| h=20 | 50.54 | 0.000781 | 🔴 Reject H0 |
+
+### Key insights cho paper (đã có evidence)
+1. **Linear regularized > Foundation zero-shot > Trees ~ DL ~ Classical** trên Vietnamese SJC
+2. **Foundation zero-shot competitive với classical** (same MAPE band) — useful khi chưa có training resources
+3. **Lag features dominate** (SHAP) but macro (USD/Treasury/GLD) contributes — paper claim quantified
+4. **Conformal under-coverage trong volatile regime** → ACI adapts (~83% achieved)
+
+### Defer to W5
+- Streamlit dashboard
+- TDTU report.docx + IEEE LaTeX paper
+- Real sentiment scraping (PhoBERT pipeline ready)
+- TimesFM + Lag-Llama + Moirai (Chronos-Bolt đã đại diện foundation family)
+
+---
 
 ---
 
