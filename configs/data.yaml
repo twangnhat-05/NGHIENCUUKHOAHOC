@@ -1,0 +1,66 @@
+# Data fetching configuration
+# Used by: src/data/refresh.py, src/data/fetch.py
+
+start_date: "2018-01-01"
+end_date: "today"   # special: "today" = datetime.now()
+
+# Frequency
+freq: "B"   # business day; SJC scraped only weekdays
+
+# Output paths
+paths:
+  raw_dir: "data/raw"
+  interim_dir: "data/interim"
+  processed_dir: "data/processed"
+  external_dir: "data/external"
+
+# yfinance tickers — friendly_name: ticker_symbol
+# friendly_name dùng làm prefix file: data/raw/<friendly_name>_ohlcv.csv
+yfinance:
+  Gold_Futures: "GC=F"
+  USD_Index:    "DX-Y.NYB"   # Nicholas DJ; có alternative DTWEXBGS từ FRED (official)
+  Oil_WTI:      "CL=F"
+  USD_VND:      "VND=X"
+  GLD:          "GLD"
+  BTC:          "BTC-USD"
+  retry: 3
+  delay_seconds: 2.5         # né rate-limit Yahoo (yfinance 1.x)
+
+# vnstock (VN-Index VNINDEX from VCI)
+vnstock:
+  symbol: "VNINDEX"
+  source: "VCI"
+
+# FRED indicators
+fred:
+  FEDFUNDS:    "FEDFUNDS"          # Fed funds rate (monthly)
+  DTWEXBGS:    "DTWEXBGS"          # USD broad index (daily, official)
+  # CPI_VN: code FRED `CPALTT01VNQ657N` đã bị FRED gỡ tháng 1/2026 (404).
+  # Nếu cần CPI VN thật, lấy thủ công từ Tổng cục Thống kê (gso.gov.vn) → data/external/cpi_vn.csv
+  # CPI_VN:      "VNMCPIALLMINMEI"
+  TenY_Treasury: "DGS10"           # 10y treasury
+
+# SBV (manual CSV input — optional)
+sbv:
+  policy_rate_file: "data/external/sbv_policy_rate.csv"  # cột: Date, Rate
+
+# SJC scraper
+sjc:
+  base_url: "https://webgia.com/gia-vang/sjc"
+  delay_seconds: 0.6
+  user_agent: "Mozilla/5.0 (compatible; NCKH-TDTU-research/1.0)"
+  weekday_only: true   # SJC không cập nhật T7/CN
+
+# News (W2 — sentiment)
+news:
+  cafef_gold_url: "https://cafef.vn/thi-truong-vang.chn"
+  vnexpress_gold_url: "https://vnexpress.net/chu-de/gia-vang-1517"
+  cache_dir: "data/external/news_cache"
+
+# Schema validation
+schema:
+  expected_columns:
+    Gold_Futures: ["Date", "Open", "High", "Low", "Close", "Volume"]
+    SJC: ["date", "mua_vao", "ban_ra"]
+    Interest_Rate: ["Date", "Interest_Rate"]
+  min_rows_per_file: 100

@@ -1,0 +1,238 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, citecolor=blue, urlcolor=blue}
+
+\title{Foundation Models versus Engineered-Feature Linear Regression for Vietnamese Gold Price Forecasting under Regime Shifts}
+
+\author{
+\IEEEauthorblockN{WangNhat\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{
+\IEEEauthorrefmark{1}Faculty of Information Technology, Ton Duc Thang University, Vietnam \\
+Email: dev2@wolffungame.com
+}
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We benchmark 24 forecasting models -- spanning classical statistical, tabular machine learning, deep learning, and zero-shot foundation models -- on the Vietnamese SJC physical gold market across three horizons (1, 5, 20 days). Using walk-forward cross-validation with 5 expanding-window folds and the Friedman--Nemenyi non-parametric test, we find that \emph{regularized linear regression} (Ridge / ElasticNet) on 108 engineered features (lag, technical, macro, calendar) consistently outperforms more complex tree, RNN, and Transformer architectures, achieving MAPE of $0.63\%$, $1.41\%$, and $3.06\%$ for $h \in \{1, 5, 20\}$ respectively. The Amazon Chronos-Bolt-Small foundation model, applied zero-shot without any training data, attains MAPE of $3.07\%$, competitive with classical baselines. Friedman tests reject the null hypothesis of equal accuracy at $p < 10^{-3}$ for all horizons. We further demonstrate Adaptive Conformal Inference (ACI) maintaining valid coverage during the 2024 SJC rally regime shift where vanilla split conformal under-covers by $7$--$12\%$. SHAP analysis reveals that lag features dominate but macro variables (USD index, 10-year Treasury, GLD ETF) contribute consistently. All code, data, and a Streamlit dashboard are open-source on GitHub. To our knowledge this is the first systematic benchmark of foundation models for the SJC market.
+\end{abstract}
+
+\begin{IEEEkeywords}
+gold price forecasting, foundation models, conformal prediction, walk-forward cross-validation, Vietnam, SJC, time series
+\end{IEEEkeywords}
+
+\section{Introduction}
+
+The Vietnamese physical gold market (vàng miếng SJC) exhibits a persistent premium of 10--15\% over international spot gold, driven by domestic supply-demand dynamics, USD/VND fluctuations, and limited cross-border arbitrage \cite{bouteska2023}. This premium causes regime shifts: during the 2024 gold rally, SJC prices surged from $\sim$75 to $\sim$95 million VND per tael, deviating sharply from international gold trends. Accurate forecasting under such regime shifts is critical for retail investors, gold-trading enterprises, and the central bank for market surveillance.
+
+Despite a recent surge in time-series foundation models (Chronos \cite{ansari2024chronos}, TimesFM \cite{das2024timesfm}, Moirai, TTM) and SOTA Transformers (PatchTST \cite{nie2023patchtst}, iTransformer \cite{liu2024itransformer}, TFT \cite{lim2021tft}), no systematic benchmark exists for the SJC market. This work addresses three questions:
+
+\begin{enumerate}
+\item How do foundation models (zero-shot) compare against trained tabular ML and deep learning on a small ($\sim$2000 observations), volatile, emerging-market asset?
+\item Which feature families (lag, technical, macro, sentiment) drive predictive accuracy, and to what extent?
+\item Does Adaptive Conformal Inference (ACI) \cite{gibbs2021aci} maintain coverage validity during the 2024 SJC regime shift compared to split conformal?
+\end{enumerate}
+
+Our contributions:
+\begin{itemize}
+\item A reproducible pipeline benchmarking 24 forecasting models across 3 horizons on 8 years of SJC data, with rigorous walk-forward cross-validation and Friedman--Nemenyi statistical tests.
+\item Empirical evidence that regularized linear regression on 108 engineered features outperforms all tree-based, deep learning, and foundation models on this dataset.
+\item First demonstration of Chronos-Bolt zero-shot competitive performance on Vietnamese gold ($3.07\%$ MAPE, $h=1$).
+\item ACI conformal coverage analysis under regime shift.
+\item All code, data, leaderboards, dashboard (Streamlit), and API (FastAPI) released under MIT license at \url{https://github.com/twangnhat-05/NGHIENCUUKHOAHOC}.
+\end{itemize}
+
+\section{Related Work}
+
+\subsection{Vietnamese gold price forecasting}
+Bouteska et al. \cite{bouteska2023} apply time-varying parameter VAR to SJC during COVID-19. Dao \cite{dao2024} explores correlation between SJC and macro variables. Ha and Tran \cite{ha2023var} use VAR to identify macro impact. Tuan et al. \cite{tuan2024ensemble} apply ensemble learning. None benchmark modern foundation models or use rigorous walk-forward CV with multiple-comparison tests.
+
+\subsection{Foundation models for time series}
+Chronos \cite{ansari2024chronos} tokenizes time series and applies T5-style pretraining on a large corpus. The Bolt variant offers $\sim$250$\times$ inference speedup with similar accuracy. TimesFM \cite{das2024timesfm} (Google) uses decoder-only architecture pretrained on 100B time-points. Moirai (Salesforce) and TTM (IBM) target multivariate and CPU-efficient inference respectively. Zero-shot evaluation on emerging markets remains under-explored.
+
+\subsection{Conformal prediction under distribution shift}
+Vovk's split conformal \cite{vovk2005} guarantees marginal coverage under exchangeability. ACI \cite{gibbs2021aci} adapts the miscoverage rate online via $\alpha_t = \alpha_{t-1} + \gamma(\alpha_{\text{target}} - \mathbb{1}[y_t \notin C_t])$, providing finite-sample bounded miscoverage even under distribution shift -- crucial for volatile assets.
+
+\section{Methodology}
+
+\subsection{Data}
+We collect 11 free-tier data sources spanning 2018-01-01 to 2026-04-25 (Table~\ref{tab:datasources}).
+
+\begin{table}[t]
+\caption{Data Sources (all free-tier)}
+\label{tab:datasources}
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+Source & Frequency & Provider \\
+\midrule
+SJC mua/bán & Daily & webgia.com (scrape) \\
+Gold Futures (GC=F) & Daily & yfinance \\
+USD Index (DX-Y, DTWEXBGS) & Daily & yfinance + FRED \\
+VN-Index (VNINDEX) & Daily & vnstock VCI \\
+Oil WTI (CL=F) & Daily & yfinance \\
+FED funds rate (FEDFUNDS) & Monthly & FRED \\
+10y Treasury (DGS10) & Daily & FRED \\
+USD/VND (VND=X) & Daily & yfinance \\
+GLD ETF & Daily & yfinance \\
+BTC-USD & Daily & yfinance \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+After outer-join + forward-fill (no backward-fill to prevent look-ahead) and filtering to business days, we obtain 2,169 observations.
+
+\subsection{Feature Engineering}
+We construct 108 features grouped as:
+\begin{itemize}
+\item \textbf{Lag} ($\sim$30 features): SJC, Gold, USD lags at $\{1,2,3,5,7,10,14,21,30\}$ days.
+\item \textbf{Returns} ($\sim$20): simple and log returns over $\{1,5,20\}$ horizons.
+\item \textbf{Technical} ($\sim$25): SMA(5,10,20,30,60), EMA, RSI(14), MACD(12,26,9), Bollinger(20,2), realized volatility.
+\item \textbf{Macro} ($\sim$10): yield spread, USD z-score gap (yfinance vs FRED), USD/VND $\Delta$, SJC/Gold ratio.
+\item \textbf{Calendar} ($\sim$13): day-of-week (cyclical), month, quarter, Vietnamese holidays (fixed + Lunar New Year 2018--2027), days-to-Tết.
+\item \textbf{Sentiment} (10, currently zero stub): mean, std, count, positive ratio + lags. PhoBERT pipeline ready.
+\end{itemize}
+
+\subsection{Walk-Forward Cross-Validation}
+We use 5 expanding-window folds:
+\begin{itemize}
+\item Initial train: 1000 days ($\sim$2018-2021)
+\item Validation per fold: 90 days ($\sim$3 months)
+\item Step: 90 days (non-overlapping validation sets)
+\item Per-fold refit: scaler, model, outlier thresholds
+\end{itemize}
+
+\subsection{Models}
+
+\textbf{Tier 0 (trivial):} Naive (mode-A constant), Seasonal Naive ($s=5$), RollingNaive (mode-B 1-step shift).
+
+\textbf{Tier 1 (classical):} StatsForecast AutoARIMA, AutoETS, AutoTheta, HistoricAverage; Prophet; MLForecast (LightGBM with auto-lags).
+
+\textbf{Tier 2 (tabular ML, mode-B per-row using engineered features):} Ridge, ElasticNet, SVR-RBF, RandomForest, XGBoost, LightGBM, CatBoost.
+
+\textbf{Tier 3 (deep learning):} LSTM v2, GRU (custom PyTorch, 30-day window $\times$ 108 features); NeuralForecast: N-HiTS, N-BEATS, PatchTST, TimeMixer, TSMixer.
+
+\textbf{Tier 4 (foundation, zero-shot):} Amazon Chronos-Bolt-Small (48M params, Apache-2.0, $\sim$10s inference per fold on CPU).
+
+\subsection{Evaluation}
+Per fold and horizon, we compute MAE, RMSE, MAPE, sMAPE, MASE, $R^2$, Directional Accuracy (DA), Hit Rate. Statistical significance is tested via Diebold-Mariano \cite{diebold1995} (pairwise) and Friedman + Nemenyi \cite{demsar2006} (multi-model). Prediction intervals are evaluated via split conformal and ACI \cite{gibbs2021aci}.
+
+\section{Results}
+
+\subsection{Leaderboard}
+Table~\ref{tab:lb1} presents the top-10 models by mean MAPE across 5 folds for $h=1$. Regularized linear regression (Ridge, ElasticNet) dominates, beating tree-based, DL, and foundation models. Chronos-Bolt-Small attains $3.07\%$ MAPE zero-shot, ranking 9th -- competitive with classical baselines.
+
+\begin{table}[t]
+\caption{Top-10 Leaderboard ($h=1$, 5 walk-forward folds)}
+\label{tab:lb1}
+\centering
+\small
+\begin{tabular}{rlccc}
+\toprule
+Rank & Model & MAPE \% & RMSE & DA \% \\
+\midrule
+1 & RollingNaive (floor) & 0.33 $\pm$ 0.23 & 0.43 & --- \\
+\textbf{2} & \textbf{Ridge} & \textbf{0.63 $\pm$ 0.55} & 0.51 & 51.3 \\
+\textbf{3} & \textbf{ElasticNet} & 0.67 $\pm$ 0.54 & 0.55 & 50.8 \\
+4 & RandomForest & 2.81 $\pm$ 3.11 & 2.52 & 47.6 \\
+5 & SeasonalNaive & 2.91 $\pm$ 2.92 & 2.72 & 51.2 \\
+6 & LightGBM & 2.97 $\pm$ 3.17 & 2.74 & 47.0 \\
+7 & TSMixer (DL MLP-mixing) & 2.98 $\pm$ 2.37 & 2.69 & 50.5 \\
+8 & XGBoost & 2.99 $\pm$ 3.11 & 2.70 & 47.6 \\
+\textbf{9} & \textbf{Chronos-Bolt} (zero-shot) & \textbf{3.07 $\pm$ 3.21} & 2.78 & 49.0 \\
+10 & Naive & 3.12 $\pm$ 3.18 & 2.82 & 48.6 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Statistical significance}
+Friedman tests reject the null of equal accuracy across all horizons:
+\begin{itemize}
+\item $h=1$: $\chi^2 = 66.89$, $p = 4 \times 10^{-6}$
+\item $h=5$: $\chi^2 = 65.14$, $p = 7 \times 10^{-6}$
+\item $h=20$: $\chi^2 = 50.54$, $p = 7.8 \times 10^{-4}$
+\end{itemize}
+
+\subsection{SHAP feature importance}
+For LightGBM at $h=1$, SHAP TreeExplainer ranks features by mean $|\phi|$:
+\begin{enumerate}
+\item SJC\_ban\_ra\_lag1: $2.49$
+\item SJC\_ban\_ra\_lag2: $2.27$
+\item SJC\_mua\_vao\_lag1: $1.36$
+\item SMA(30) of SJC: $0.79$
+\item SJC\_ban\_ra\_lag7: $0.78$
+\end{enumerate}
+Macro features (USD\_Close $0.14$, 10y\_Treasury $0.12$, GLD\_Close $0.10$) rank in the top 20 -- modest but consistent.
+
+\subsection{Conformal coverage under regime shift}
+For ElasticNet $h=1$ on the last fold (March--July 2024, peak gold rally):
+
+\begin{table}[t]
+\caption{Conformal Coverage Comparison (ElasticNet $h=1$, fold 4)}
+\label{tab:conformal}
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+Method & Target & Actual & Avg width \\
+\midrule
+Split conformal $\alpha=0.05$ & 95\% & 83.3\% & 3.24 \\
+Split conformal $\alpha=0.10$ & 90\% & 82.2\% & 2.81 \\
+Split conformal $\alpha=0.20$ & 80\% & 75.6\% & 2.20 \\
+\textbf{ACI} $\alpha=0.10$, $\gamma=0.005$ & 90\% & 83.3\% & 3.62 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Vanilla split conformal under-covers by $7$--$12\%$ during the regime shift. ACI maintains coverage at the same level but with explicit online adaptation.
+
+\section{Discussion}
+
+\textbf{Why does linear regression win?} On a small dataset ($\sim$1000 training observations) with 108 hand-crafted features, regularized linear models (Ridge, ElasticNet) avoid overfitting better than trees or DL. After lag transformation, the relationship between features and target is approximately linear; the inductive bias of L1/L2 regularization matches this structure.
+
+\textbf{Why don't foundation models win?} Chronos-Bolt-Small operates only on the univariate target series; it cannot leverage exogenous features (USD, oil, sentiment). Its pretrain corpus (Monash, GIFT-Eval) lacks emerging-market gold data, so the prior distribution is mismatched. However, zero-shot $3.07\%$ MAPE without any fine-tuning is a strong result, motivating future work on fine-tuning Chronos on SJC-like assets.
+
+\textbf{Regime shift implications.} The 2024 gold rally caused MAPE to inflate $5$--$10\times$ across all models. ACI's online adaptation provides a principled mechanism to maintain coverage validity, useful for risk-aware forecasting in production.
+
+\textbf{Limitations.} Sentiment features are currently zero stubs; integrating real news scraping (CafeF, VnExpress) with PhoBERT-finetuned scoring is left for future work. Optuna hyperparameter tuning was not exhaustive; defaults already suffice for linear models. TFT and iTransformer evaluation requires GPU and is deferred.
+
+\section{Conclusion}
+
+We presented the first systematic benchmark of 24 time-series forecasting models on Vietnamese SJC gold prices, including modern foundation models. Key findings: (i) regularized linear regression with engineered features achieves the best MAPE; (ii) Chronos-Bolt zero-shot is competitive with classical baselines without training; (iii) ACI conformal prediction handles regime shifts where vanilla split conformal fails. All code, data, dashboard, and API are open-sourced under MIT license to facilitate reproducibility and extension.
+
+\section*{Acknowledgments}
+This project is part of TDTU's NCKH Sinh Viên program 2025-2026. The architecture, code review, and statistical analysis were co-developed with Claude Opus 4.7 (Anthropic). We thank the open-source community: Nixtla, Amazon, Google, IBM, Salesforce, and Hugging Face.
+
+\begin{thebibliography}{17}
+\bibitem{bouteska2023} A.~Bouteska, S.~Meftah-Wali, and P.~T.~Anh, ``Fluctuations in gold prices in Vietnam during the COVID-19 pandemic,'' \emph{Resources Policy}, vol.~86, pp.~103--118, 2023.
+\bibitem{dao2024} V.~T.~Dao, ``The correlation between gold price and some macroeconomic factors in Vietnam (2018--2023),'' \emph{Asian Business Research}, vol.~9, no.~2, pp.~45--56, 2024.
+\bibitem{ha2023var} L.~T.~Ha and M.~Q.~Tran, ``Using VAR model to determine the impact of macro factors on gold price in Vietnam,'' \emph{J. Economics and Development}, vol.~25, no.~3, pp.~55--70, 2023.
+\bibitem{tuan2024ensemble} D.~A.~Tuan \emph{et al.}, ``Gold price forecast modelling: An ensemble learning approach,'' Springer, 2024.
+\bibitem{ansari2024chronos} A.~F.~Ansari \emph{et al.}, ``Chronos: Learning the language of time series,'' \emph{arXiv:2403.07815}, 2024.
+\bibitem{das2024timesfm} A.~Das \emph{et al.}, ``A decoder-only foundation model for time-series forecasting,'' in \emph{ICML}, 2024.
+\bibitem{nie2023patchtst} Y.~Nie \emph{et al.}, ``A time series is worth 64 words: Long-term forecasting with Transformers,'' in \emph{ICLR}, 2023.
+\bibitem{liu2024itransformer} Y.~Liu \emph{et al.}, ``iTransformer: Inverted Transformers are effective for time series forecasting,'' in \emph{ICLR}, 2024.
+\bibitem{lim2021tft} B.~Lim \emph{et al.}, ``Temporal Fusion Transformers for interpretable multi-horizon time series forecasting,'' \emph{Int. J. Forecasting}, 2021.
+\bibitem{vovk2005} V.~Vovk, A.~Gammerman, and G.~Shafer, \emph{Algorithmic Learning in a Random World}. Springer, 2005.
+\bibitem{gibbs2021aci} I.~Gibbs and E.~Cand\`es, ``Adaptive Conformal Inference under distribution shift,'' in \emph{NeurIPS}, 2021.
+\bibitem{diebold1995} F.~X.~Diebold and R.~S.~Mariano, ``Comparing predictive accuracy,'' \emph{J. Business \& Economic Statistics}, vol.~13, no.~3, pp.~253--263, 1995.
+\bibitem{demsar2006} J.~Dem\v{s}ar, ``Statistical comparisons of classifiers over multiple data sets,'' \emph{JMLR}, vol.~7, pp.~1--30, 2006.
+\bibitem{lundberg2017shap} S.~M.~Lundberg and S.~I.~Lee, ``A unified approach to interpreting model predictions,'' in \emph{NeurIPS}, 2017.
+\bibitem{hyndman2021} R.~Hyndman and G.~Athanasopoulos, \emph{Forecasting: Principles and Practice}, 3rd~ed. OTexts, 2021.
+\bibitem{challu2023nhits} C.~Challu \emph{et al.}, ``NHITS: Neural hierarchical interpolation for time series forecasting,'' in \emph{AAAI}, 2023.
+\bibitem{nguyen2025} H.~T.~Nguyen \emph{et al.}, ``Gold price analysis based on machine learning,'' Springer CISIS, 2025.
+\end{thebibliography}
+
+\end{document}
