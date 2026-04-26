@@ -83,7 +83,30 @@ git reset --hard milestone-N
 - Tests: 35/35 PASS (12 CV no-leakage + 13 metrics + 10 features)
 
 ### 22:35 — M2 closure
-- Sắp commit + tag `milestone-2-baselines` + push
+- Commit + tag `milestone-2-baselines` + push ✅
+
+### 22:50 — M3 (W3) start: ML + DL + stat tests
+- Install: catboost 1.2.10, mlflow 3.11.1, neuralforecast 3.1.7 (background ~3 phút)
+- W3.2 ML wrappers: Ridge/ElasticNet/SVR/RF/XGB/LGBM/CatBoost + Stacking
+  - Mode-B per-row using features_v2 (108 features)
+  - Bug fix: Ridge fillna trong fit
+- W3.4 Run ML baselines: 105 records, Ridge h=1 = 0.63% MAPE (BEAT classical)
+- W3.5 LSTM v2 + GRU PyTorch sequence (CPU, 30-day window × 108 features)
+- W3.6 NeuralForecast wrappers: NHITS/NBEATS/PatchTST/TimeMixer/TSMixer + iTransformer/TFT
+  - --fast mode bỏ iTransformer/TFT (~60-120s/run trên CPU)
+- W3.7 Statistical tests: DM (HAC + small-sample) + Friedman + Nemenyi
+- DL benchmark chạy ngầm ~58 phút (5 NF + 2 simple × 3 horizons × 5 folds = 105 records)
+- Tests: 47/47 PASS (+12: 7 ML + 5 stat tests)
+
+### 00:15 (2026-04-27) — Combined leaderboard
+- 23 models × 5 folds × 3 horizons = 345 records
+- Friedman h=20: stat=49.35, p=0.000718 → reject H0
+- Top: RollingNaive (mode-B floor) > Ridge > ElasticNet
+- Best DL: TSMixer (3.0% MAPE h=1) — MLP-mixing > Transformer
+
+### 00:20 — M3 closure
+- Update MONITORING.md, CHANGELOG.md
+- Sắp commit + tag `milestone-3-models` + push
 
 
 

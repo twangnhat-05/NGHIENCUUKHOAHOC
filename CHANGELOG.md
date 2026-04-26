@@ -7,7 +7,71 @@ versioning theo [SemVer](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased] — branch `claude/auto-execution`
 
-(Đang chuẩn bị W3 — ML/DL models)
+(Đang chuẩn bị W4 — Foundation models + Conformal PI + XAI)
+
+---
+
+## [0.3.0-w3] — `milestone-3-models` (2026-04-27)
+
+### Added (M3: ML + DL models, statistical tests, combined leaderboard)
+
+#### Tier-2 Tabular ML (7 models)
+- `src/models/ml.py`: _MLBaseWrapper với mode-B per-row prediction
+  - Ridge, ElasticNet, SVR_RBF, RandomForest, XGBoost, LightGBM, CatBoost
+  - StackingRegressor (XGB + LGBM + Cat → Ridge meta)
+  - Horizon baked vào constructor; ffill/bfill/fillna handle NaN
+- `scripts/run_ml_baselines.py`: CLI entry
+- `src/training/tune.py`: Optuna helpers (XGB + LGBM, TPE 30 trials)
+- `src/training/trainer.py`: thêm `evaluate_ml_one_fold` cho mode-B path
+
+#### Tier-3 Deep Learning (7 models)
+- `src/models/dl_simple.py`: PyTorch sequence wrappers (CPU)
+  - LSTM v2 + GRU; sliding window 30 days × 108 features
+  - Anti-leakage: scaler fit on train, train_tail bridge cho val predict
+  - Early stopping (patience=5), batch=64, Adam lr=1e-3
+- `src/models/dl_neuralforecast.py`: 7 NeuralForecast wrappers
+  - N-HiTS, N-BEATS, PatchTST, TimeMixer, TSMixer, iTransformer, TFT
+  - --fast mode bỏ iTransformer + TFT (CPU slow ~60-120s/run)
+- `scripts/run_dl_baselines.py`: CLI entry
+
+#### Statistical tests
+- `src/evaluation/stat_tests.py`:
+  - Diebold-Mariano (HAC variance, Harvey-Leybourne small-sample correction)
+  - Friedman + Nemenyi post-hoc (mean ranks + critical difference table)
+  - dm_pairwise_table cho mọi cặp model
+- `scripts/combine_leaderboards.py`: merge classical+ml+dl, run Friedman per horizon
+
+#### Tests (47 total, +12 new)
+- `tests/test_ml_models.py`: 7 tests (ML scaler no-leakage, target exclusion, fit/predict)
+- `tests/test_stat_tests.py`: 5 tests (DM identical=p=1, perfect-vs-naive p<0.001, Friedman ranks)
+
+### Results — Combined leaderboard (23 models × 5 folds × 3 horizons = 345 records)
+
+| Horizon | Top 3 by MAPE | Family |
+|---|---|---|
+| h=1 | RollingNaive 0.33% / Ridge 0.63% / ElasticNet 0.67% | mode-B / ML / ML |
+| h=5 | RollingNaive 0.96% / ElasticNet 1.41% / Ridge 1.67% | mode-B / ML / ML |
+| h=20 | RollingNaive 2.67% / ElasticNet 3.06% / LightGBM 3.20% | mode-B / ML / ML |
+
+Friedman test h=20: stat=49.35, p=0.000718 → reject H0 (models differ significantly).
+
+### Key insights cho paper
+1. **Linear regularized (Ridge/ElasticNet) bứt phá** với 108 engineered features — beat trees + DL ngắn hạn.
+2. **TSMixer là DL tốt nhất** (3.0% MAPE) — MLP-mixing > Transformer (PatchTST, TimeMixer) trên dataset nhỏ.
+3. **2024 gold rally regime** (fold 3-4) đẩy MAPE 5-10x — cần regime-aware forecasting (W4 conformal).
+
+### Bug fixes
+- ML wrapper Ridge fail NaN → fillna trong fit
+- yfinance API empty (W1 carryover) — fix lasting
+- MLForecast freq B mismatch VN holidays — integer index workaround
+
+### Defer to W4 / W5
+- Optuna tuning per fold (linear models đã good enough)
+- iTransformer + TFT (need GPU) — user chạy Colab nếu muốn
+- DM pairwise raw-predictions (cần update trainer save preds)
+- Sentiment scraping (PhoBERT pipeline ready, news data missing)
+
+---
 
 ---
 
