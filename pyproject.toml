@@ -1,0 +1,99 @@
+[project]
+name = "gold-price-forecasting"
+version = "0.1.0"
+description = "Vietnamese gold price (SJC) forecasting — TDTU NCKH 2025-2026"
+authors = [{name = "WangNhat", email = "dev2@wolffungame.com"}]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11,<3.13"
+keywords = ["gold-price", "time-series", "forecasting", "vietnam", "sjc", "deep-learning", "foundation-models"]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+# ============================================================
+# RUFF (linter + formatter)
+# ============================================================
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [
+    ".git", ".venv", "__pycache__", "build", "dist",
+    "src/legacy",       # frozen — don't lint
+    "notebooks",        # nbqa needed for ipynb, skip raw .py-likes
+    "output",
+    "mlruns",
+]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort
+    "B",        # bugbear
+    "UP",       # pyupgrade
+    "SIM",      # simplify
+    "PD",       # pandas-vet
+    "NPY",      # numpy
+    "PL",       # pylint subset
+    "RUF",      # ruff specific
+]
+ignore = [
+    "E501",     # line-too-long (use formatter)
+    "PLR0913",  # too many args (ML signatures)
+    "PLR2004",  # magic value (numeric thresholds OK in ML)
+    "PD901",    # df name OK
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ============================================================
+# BLACK
+# ============================================================
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+extend-exclude = '''
+(
+  src/legacy/.*
+  | output/.*
+  | mlruns/.*
+)
+'''
+
+# ============================================================
+# PYTEST
+# ============================================================
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "-ra --strict-markers --tb=short -q"
+filterwarnings = [
+    "ignore::DeprecationWarning:yfinance.*",
+    "ignore::FutureWarning:pandas.*",
+    "ignore::UserWarning:statsforecast.*",
+]
+markers = [
+    "slow: tests that take > 5s",
+    "integration: requires network or full data",
+    "no_leakage: critical anti-leakage gates",
+]
+
+# ============================================================
+# MYPY (loose — financial code has many ndarrays)
+# ============================================================
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = false
+warn_unused_configs = true
+ignore_missing_imports = true
+exclude = ["src/legacy/", "build/", "dist/"]

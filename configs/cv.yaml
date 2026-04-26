@@ -1,0 +1,37 @@
+# Cross-validation configuration
+# Used by: src/training/cv.py
+
+scheme: "walk_forward_expanding"   # walk_forward_expanding | walk_forward_rolling | time_series_split
+
+# Final hold-out test (NEVER touched in CV)
+test:
+  start_date: "2025-10-01"
+  end_date: "2026-04-25"
+
+# Train + validation period
+train_val:
+  start_date: "2018-01-01"
+  end_date: "2025-09-30"
+
+# Walk-forward configuration
+walk_forward:
+  n_folds: 5
+  initial_train_size: 1000   # ~4 năm đầu (2018-2021)
+  val_size: 90               # ~3 tháng / fold
+  step_size: 90              # khoảng cách giữa các fold (= val_size cho non-overlap)
+  refit_scaler_per_fold: true
+  refit_outlier_threshold_per_fold: true
+
+# Multi-horizon
+horizons: [1, 5, 20]
+
+# Reproducibility
+seeds: [42, 123, 2024]   # 3 seeds cho DL models, mean ± std
+
+# Anti-leakage flags (enforced by tests/test_cv_no_leakage.py)
+strict_no_leakage:
+  - "no_test_in_train"
+  - "no_future_dates_in_train_fold"
+  - "scaler_fit_only_on_train"
+  - "outlier_threshold_only_from_train"
+  - "target_shift_correctness"

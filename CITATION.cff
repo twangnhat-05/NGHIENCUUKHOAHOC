@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+title: "Vietnamese Gold Price Forecasting with Foundation Models and Conformal Prediction"
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - given-names: WangNhat
+    affiliation: "Ton Duc Thang University"
+    email: dev2@wolffungame.com
+keywords:
+  - gold-price
+  - time-series
+  - forecasting
+  - vietnam
+  - foundation-models
+  - conformal-prediction
+license: MIT
+repository-code: "https://github.com/twangnhat-05/NGHIENCUUKHOAHOC"
+date-released: 2026-04-26
+version: "0.1.0"

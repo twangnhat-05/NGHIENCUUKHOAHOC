@@ -1,0 +1,62 @@
+# Feature engineering configuration
+# Used by: src/features/build.py
+
+# Target column
+target_column: "SJC_ban_ra"
+target_horizons: [1, 5, 20]   # h = ngày dự báo
+
+# Lag features
+lags:
+  SJC_ban_ra:    [1, 2, 3, 5, 7, 10, 14, 21, 30]
+  SJC_mua_vao:   [1, 5]
+  Gold_Close:    [1, 3, 5, 10]
+  USD_Index_Close: [1, 5]
+  Oil_Close:     [1, 5]
+  VN_Index_Close: [1, 5]
+  Sentiment:     [1, 3, 7]    # W2
+
+# Returns
+returns:
+  columns: ["SJC_ban_ra", "Gold_Close", "USD_Index_Close", "Oil_Close", "VN_Index_Close"]
+  periods: [1, 5, 20]
+  log_returns: true
+
+# Technical indicators
+technical:
+  sma:        [5, 10, 20, 30, 60]
+  ema:        [10, 30]
+  rsi:        [14]
+  macd:       {fast: 12, slow: 26, signal: 9}
+  bollinger:  {window: 20, n_std: 2.0}
+  atr:        [14]
+  stochastic: {k: 14, d: 3}
+  realized_vol: [5, 10, 20]   # rolling std of returns
+
+# Macro derived
+macro:
+  yield_spread_pairs: []        # add when 10y/2y treasury available
+  cpi_yoy: true
+  usd_vnd_change: [1, 5, 20]
+
+# Calendar features
+calendar:
+  day_of_week: true
+  day_of_month: true
+  month: true
+  quarter: true
+  is_month_end: true
+  vn_holidays: true             # Tết, 30/4, 1/5, 2/9...
+
+# Outlier handling (FIXED LEAKAGE — fit only on train per fold)
+outliers:
+  method: "winsorize"           # winsorize | zscore | iqr | none
+  lower_pct: 1.0
+  upper_pct: 99.0
+  fit_on: "train_fold"          # NEVER "full" — đó là leakage
+  exclude_columns: ["Date"]
+
+# Missing values
+missing:
+  method: "ffill"
+  use_bfill: false              # KHÔNG dùng bfill — leakage tương lai
+  drop_remaining: true
