@@ -240,10 +240,20 @@ def scrape_sjc_day(date: datetime, session: requests.Session, base_url: str, ua:
                     mua_vals.append(mua)
                     ban_vals.append(ban)
         if mua_vals and ban_vals:
+            # webgia.com returns the price per chỉ in raw VND (e.g.
+            # 16,880,000 VND/chỉ). The historical CSV is stored as millions
+            # VND per lượng (1 lượng = 10 chỉ), e.g. 168.8. So divide by 1e5
+            # (= /1e6 to convert VND→million, then ×10 to convert chỉ→lượng).
+            mua = mua_vals[-1]
+            ban = ban_vals[-1]
+            if mua > 1e5:
+                mua = mua / 1e5
+            if ban > 1e5:
+                ban = ban / 1e5
             return {
                 "date": date.strftime("%Y-%m-%d"),
-                "mua_vao": mua_vals[-1],
-                "ban_ra": ban_vals[-1],
+                "mua_vao": round(mua, 2),
+                "ban_ra": round(ban, 2),
             }
     return None
 

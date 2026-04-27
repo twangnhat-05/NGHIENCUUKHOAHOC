@@ -182,18 +182,26 @@ def build_features(
     out = add_targets(out, target_col, horizons)
     log.info(f"After targets (horizons={horizons}): {out.shape}")
 
-    # 7) Drop rows với target NaN (cuối chuỗi cho h lớn nhất)
+    # 7) Drop rows với TẤT CẢ horizon target đều NaN (only the very last
+    #    row(s) where no horizon is computable). We keep rows where some
+    #    targets are NaN so the live-inference path still has the latest
+    #    observations available — the trainer drops per-horizon NaN itself.
+    target_cols = [f"y_h{h}" for h in horizons]
     if drop_na_targets:
-        max_h = max(horizons)
         before = len(out)
-        # Drop rows mà TẤT CẢ horizon target đều NaN
-        target_cols = [f"y_h{h}" for h in horizons]
         out = out.dropna(subset=target_cols, how="all")
-        log.info(f"After drop NaN targets: {len(out)} rows (drop {before - len(out)} ở cuối, max horizon={max_h})")
+        log.info(f"After drop NaN-all-targets: {len(out)} rows (drop {before - len(out)})")
 
-    # 8) Drop rows đầu chuỗi với feature NaN do lag/SMA/etc
+    # 8) Drop rows where any FEATURE column is NaN (warm-up at start of
+    #    series). Targets may legitimately be NaN at the tail (h=20 needs
+    #    20 future days) — we DO NOT drop those; trainer / inference handle
+    #    them downstream.
+    feature_cols = [
+        c for c in out.columns
+        if c not in ("Date",) and c not in target_cols
+    ]
     before = len(out)
-    out = out.dropna()
+    out = out.dropna(subset=feature_cols)
     log.info(f"After drop NaN features (warm-up): {len(out)} rows (drop {before - len(out)})")
 
     return out
