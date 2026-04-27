@@ -1,0 +1,69 @@
+# Git
+.git/
+.gitignore
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Notebooks state
+.ipynb_checkpoints/
+
+# Local Claude/HF cache
+.claude/settings.local.json
+
+# Lightning logs (regenerated)
+lightning_logs/
+mlruns/
+mlartifacts/
+
+# Big files KHÔNG include trong serving image
+data/raw/
+data/interim/
+output/
+reports/leaderboard/*.png
+reports/leaderboard/*_long.csv
+reports/leaderboard/ml_*.csv
+reports/leaderboard/dl_*.csv
+reports/leaderboard/foundation_*.csv
+reports/leaderboard/classical*.csv
+reports/figures/shap_lightgbm_h1.png
+reports/figures/conformal_full_*.png
+reports/figures/conformal_full_*.csv
+reports/paper/
+
+# Huge legacy + docs
+src/legacy/
+docs/
+HANDOVER.md
+PHASE_2_PLAN.md
+prompt_for_next_session.md
+ARCHITECTURE.md
+CLAUDE_EXECUTION_LOG.md
+MONITORING.md
+CHANGELOG.md
+BM02_decuong.pdf
+LICENSE
+CITATION.cff
+
+# Tests not in production image
+tests/
+
+# OS
+.DS_Store
+Thumbs.db

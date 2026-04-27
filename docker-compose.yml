@@ -1,0 +1,61 @@
+# Docker Compose: Streamlit dashboard + FastAPI together
+#
+# Usage:
+#   docker compose up -d
+#   → Streamlit: http://localhost:8501
+#   → FastAPI:   http://localhost:8000/docs
+#
+#   docker compose down
+#   docker compose logs -f streamlit
+#
+# Build images first if chưa build:
+#   docker build -t gold-sjc:serving --target serving .
+
+services:
+
+  streamlit:
+    image: gold-sjc:serving
+    container_name: gold-sjc-streamlit
+    command: >
+      streamlit run app/streamlit_app.py
+      --server.headless=true
+      --server.port=8501
+      --server.address=0.0.0.0
+      --browser.gatherUsageStats=false
+    ports:
+      - "8501:8501"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  api:
+    image: gold-sjc:serving
+    container_name: gold-sjc-api
+    command: >
+      uvicorn app.api.main:app
+      --host 0.0.0.0
+      --port 8000
+      --workers 1
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Optional: Telegram bot — comment out nếu không dùng
+  # telegram-bot:
+  #   image: gold-sjc:serving
+  #   container_name: gold-sjc-telegram
+  #   command: python app/telegram_bot.py
+  #   environment:
+  #     - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+  #   restart: unless-stopped
+
+# Note: foundation models (Chronos/TimesFM) cần image `gold-sjc:training` (lớn hơn)
+# Cho production deploy → dùng image `serving` lite.

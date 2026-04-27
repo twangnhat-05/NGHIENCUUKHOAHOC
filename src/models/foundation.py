@@ -172,14 +172,85 @@ class TTMForecaster(BaseForecaster):
 # REGISTRY
 # ============================================================
 
-def build_foundation_models(horizon: int = 1, include_ttm: bool = True) -> list[BaseForecaster]:
+class TimesFMForecaster(BaseForecaster):
+    """Google TimesFM 2.0 wrapper (PyTorch, ~200M params, Apache-2.0).
+
+    Pretrained decoder-only foundation model cho TS, supports horizon up to 96 default.
+    First call download ~200MB từ HF (google/timesfm-1.0-200m-pytorch hoặc 2.0-500m).
+    """
+    name = "TimesFM-2.0"
+    use_features = False  # univariate
+
+    def __init__(self, horizon: int = 1, repo_id: str = "google/timesfm-2.0-500m-pytorch",
+                 context_length: int = 512, freq: int = 0) -> None:
+        self.horizon = horizon
+        self.repo_id = repo_id
+        self.context_length = context_length
+        self.freq = freq  # 0 = high-freq (daily/intraday); 1 = medium; 2 = low
+        self._tfm = None
+        self._train_target: np.ndarray | None = None
+        self._last_value: float | None = None
+
+    def fit(self, train_df: pd.DataFrame, target_col: str = "SJC_ban_ra", **kwargs) -> "TimesFMForecaster":
+        if self._tfm is None:
+            try:
+                import timesfm
+                log.info(f"Loading {self.repo_id} (first call download ~200-500MB)")
+                self._tfm = timesfm.TimesFm(
+                    hparams=timesfm.TimesFmHparams(
+                        backend="cpu",
+                        per_core_batch_size=32,
+                        horizon_len=max(self.horizon, 96),
+                        input_patch_len=32,
+                        output_patch_len=128,
+                        num_layers=20,    # for 200M model
+                        model_dims=1280,
+                        use_positional_embedding=False,
+                    ),
+                    checkpoint=timesfm.TimesFmCheckpoint(huggingface_repo_id=self.repo_id),
+                )
+            except Exception as e:
+                log.error(f"TimesFM load failed: {e}; predict sẽ naive fallback")
+                self._tfm = None
+        target = train_df[target_col].dropna().to_numpy().astype(np.float32)
+        if len(target) > self.context_length:
+            target = target[-self.context_length:]
+        self._train_target = target
+        self._last_value = float(target[-1])
+        return self
+
+    def predict(self, test_df: pd.DataFrame, h: int = 1) -> np.ndarray:
+        if self._tfm is None or self._train_target is None:
+            return np.full(len(test_df), self._last_value or 0.0)
+        n = len(test_df)
+        try:
+            point_forecast, _quantile = self._tfm.forecast(
+                inputs=[self._train_target.tolist()],
+                freq=[self.freq],
+            )
+            arr = np.asarray(point_forecast).flatten()
+            if len(arr) < n:
+                arr = np.concatenate([arr, np.full(n - len(arr), arr[-1])])
+            return arr[:n]
+        except Exception as e:
+            log.warning(f"TimesFM predict failed: {e}; naive fallback")
+            return np.full(n, self._last_value or 0.0)
+
+
+def build_foundation_models(
+    horizon: int = 1,
+    include_ttm: bool = True,
+    include_timesfm: bool = False,
+) -> list[BaseForecaster]:
     """Build danh sách foundation models.
 
-    TimesFM + Lag-Llama có thể thêm sau (TimesFM cần ~500MB; Lag-Llama clone repo).
+    Lag-Llama wrapper có thể thêm sau (clone repo).
     """
     models: list[BaseForecaster] = [
         ChronosBoltForecaster(horizon=horizon, model_id="amazon/chronos-bolt-small"),
     ]
     if include_ttm:
         models.append(TTMForecaster(horizon=horizon))
+    if include_timesfm:
+        models.append(TimesFMForecaster(horizon=horizon))
     return models
