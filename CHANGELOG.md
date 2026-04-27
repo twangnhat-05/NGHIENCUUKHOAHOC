@@ -5,9 +5,31 @@ Tất cả thay đổi đáng chú ý của dự án sẽ được ghi tại đ�
 Format dựa trên [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning theo [SemVer](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — branch `claude/phase-3-execution`
+## [Unreleased] — branch `claude/phase-4-execution`
 
-(Phase 3 mini-bundle — 3 high-ROI items)
+---
+
+## [0.8.0-p4] — `milestone-8-phase4` (2026-04-27)
+
+### Added (P4 — Foundation expansion + Production)
+
+- **P4.1 TimesFM 2.0 wrapper** (`src/models/foundation.py`)
+  - Google TimesFM 2.0 (~500M params, Apache-2.0)
+  - PyTorch backend, opt-in via `build_foundation_models(include_timesfm=True)`
+  - ⚠️ Windows download fail (HF symlink + slow CDN); chạy được trên Linux/Colab/Docker
+
+- **P4.2 Dockerfile + docker-compose**
+  - Multi-stage: training (~3GB) + serving (~500MB minimal)
+  - `docker compose up -d` → Streamlit (8501) + FastAPI (8000) với healthcheck
+  - `.dockerignore` exclude legacy/raw/papers cho serving image lite
+
+- **P4.3 Auto-retrain weekly** (`scripts/retrain_weekly.py`)
+  - Pipeline: refresh → merge → features → retrain top-3 ML → compare baseline → alert
+  - JSON snapshot vào `reports/weekly_snapshots/`
+  - Exit code 2 = alert (degrade > threshold); 0 = OK
+  - Cron / Task Scheduler entries: `retrain_weekly.{sh,bat}`
+
+Tests: 47/47 PASS no regression.
 
 ---
 
