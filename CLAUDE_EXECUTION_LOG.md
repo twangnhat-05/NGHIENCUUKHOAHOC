@@ -142,5 +142,39 @@ git reset --hard milestone-N
 - Sắp commit + tag `milestone-5-delivery` + push
 - Project COMPLETE — sẵn sàng merge vào main
 
+## 2026-04-27 (Session 2 — Phase 7 Option 5: IEEE submission package)
+
+### 09:50 — P7 kickoff
+- Branch: `claude/phase-7-execution` (from `claude/phase-6-execution`)
+- Tag checkpoint: `pre-phase-7`
+- Verified state: 47/47 tests PASS, all M1–M10 tags intact
+
+### 09:55 — P7.1 Feature-family ablation (NEW)
+- `scripts/run_ablation_features.py` — 6 nested subsets × 2 models × 3 horizons × 5 folds = 180 records
+- Output: `reports/ablation/{ablation_long,ablation_summary}.csv`
+- Findings: technical = biggest h=1 contributor (-34% rel.); sentiment Δ=0% confirms P2 limitation faithfully
+- ElasticNet L1 robust at h=20; Ridge L2 degrades with feature richness
+
+### 10:05 — P7.2 Publication figures
+- `scripts/generate_paper_figures.py` — 7 figures @ 300 DPI to `reports/paper/ieee_en/figures/`
+
+### 10:15 — P7.3 main.tex expanded
+- 22 citations resolved, 7 figures inserted, 4 tables, 4 new sections
+- Word count ~4233; estimated 9-11 pages in IEEE 2-column conference format
+
+### 10:25 — P7.4 bib.bib + 5 new entries
+- ekambaram2024ttm, rasul2024laglama, angelopoulos2024conformalpid, nguyen2020phobert, he2023mdeberta
+- 0 missing, 0 unused (verified via `scripts/check_tex.py`)
+
+### 10:30 — P7.5 Submission packet templates
+- cover_letter.md (RIVF/SoICT/KSE/ICONIP-friendly)
+- reviewer_response_template.md (per-reviewer rebuttal skeleton)
+- submission_checklist.md (6-section pre-submit gate)
+
+### 10:35 — P7.6 Validation + commit
+- `pytest tests/` → 47/47 PASS in 1.58s ✅
+- `scripts/check_tex.py` → 22/22 citations OK, 7/7 figures OK, envs balanced
+- Sắp commit + tag `milestone-11-ieee-package` + push
+
 
 

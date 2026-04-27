@@ -5,7 +5,65 @@ Tất cả thay đổi đáng chú ý của dự án sẽ được ghi tại đ�
 Format dựa trên [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning theo [SemVer](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — branch `claude/phase-5-execution` (PROJECT COMPLETE)
+## [Unreleased] — branch `claude/phase-7-execution`
+
+---
+
+## [0.11.0-p7] — `milestone-11-ieee-package` (2026-04-27) — 📄 IEEE submission packet
+
+### Added (P7 — Option 5: IEEE submission package)
+
+#### P7.1 Feature-family ablation study (NEW SCIENTIFIC FINDING)
+- `scripts/run_ablation_features.py`: cumulative-add ablation across 6 nested subsets
+  (lag → +returns → +technical → +macro → +calendar → +sentiment)
+  × 2 models (Ridge, ElasticNet) × 3 horizons × 5 folds = 180 records
+- `reports/ablation/ablation_long.csv` + `ablation_summary.csv`
+- Key finding h=1: technical indicators give the largest single-family gain
+  (ElasticNet 1.01% → 0.67% MAPE = -34% relative improvement)
+- Key finding h=20: ElasticNet's L1 sparsity outperforms Ridge's L2 shrinkage
+  as feature richness increases (Ridge MAPE inflates 3.42→4.65%, ElasticNet stays 3.06%)
+- Sentiment columns confirmed Δ=0% in CV window (faithfully reported, P2 limitation)
+
+#### P7.2 Publication-quality figures (300 DPI)
+- `scripts/generate_paper_figures.py`: 7 figures rendered at 300 DPI
+- Output: `reports/paper/ieee_en/figures/fig{1..7}_*.png`
+  * fig1: top-12 leaderboard h=1
+  * fig2: top-10 leaderboards h=5 + h=20 side by side
+  * fig3: cumulative ablation curves across 3 horizons × 2 models
+  * fig4: split vs ACI coverage + width across 3 horizons × 3 base learners
+  * fig5: per-fold ElasticNet h=1 split-vs-ACI (regime shift visualisation)
+  * fig6: SHAP top-10 LightGBM h=1
+  * fig7: Friedman χ² across horizons with critical-value reference line
+
+#### P7.3 IEEE main.tex expanded (~6→~9-11 pages)
+- Abstract rewritten: 24→27 models, ablation finding, ACI coverage gain quantified
+- New Section 4.2 "Long-horizon leaderboards" + Table II (h=5/h=20 top-10)
+- New Section 4.5 "Feature-family ablation" + Table III + Fig. 3
+- New Section 4.6 "Conformal coverage under regime shift" → expanded Table IV
+  (3 horizons × 3 base learners, 45 evidence points) + Fig. 4 + Fig. 5
+- New Section 5 "Productisation" (Streamlit/PWA, FastAPI, Telegram, retrain, Docker, CI)
+- Discussion expanded: regime-shift implications, faithful reporting paragraph
+- Conclusion expanded: 5 explicit future-work directions
+
+#### P7.4 bib.bib expanded
+- Added: ekambaram2024ttm (TTM), rasul2024laglama (Lag-Llama),
+  angelopoulos2024conformalpid (Conformal PID), nguyen2020phobert (PhoBERT),
+  he2023mdeberta (mDeBERTa)
+- Total entries: 17 → 22, all cited in text (zero unused)
+
+#### P7.5 Submission packet templates
+- `reports/paper/ieee_en/cover_letter.md`: editor cover letter (RIVF/SoICT/KSE/ICONIP)
+- `reports/paper/ieee_en/reviewer_response_template.md`: rebuttal skeleton
+- `reports/paper/ieee_en/submission_checklist.md`: 6-section pre-submit checklist
+
+#### P7.6 LaTeX integrity tooling
+- `scripts/check_tex.py`: validates citations, figure paths, environment balance
+- All 22 cited keys resolve, all 7 figure paths exist, all `\begin/\end` balanced
+
+### Verified
+- ✅ 47/47 tests still PASS
+- ✅ Tex sanity: 0 missing citations, 0 unused entries, 0 broken figure refs
+- ✅ Ablation reproduces from a single command (`python -m scripts.run_ablation_features`)
 
 ---
 
