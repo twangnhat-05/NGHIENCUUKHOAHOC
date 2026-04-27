@@ -218,9 +218,72 @@ RSS_SOURCES: list[tuple[str, str, str]] = [
     # (source_id, feed_url, lang)
     ("investing", "https://www.investing.com/rss/news_25.rss", "en"),  # commodities
     ("yahoo_gold", "https://finance.yahoo.com/news/rssindex", "en"),
-    ("cafef", "https://cafef.vn/thi-truong-chung-khoan.rss", "vi"),
+    ("cafef_kd", "https://cafef.vn/thi-truong-chung-khoan.rss", "vi"),
+    ("cafef_taichinh", "https://cafef.vn/tai-chinh-ngan-hang.rss", "vi"),
     ("vnexpress_kd", "https://vnexpress.net/rss/kinh-doanh.rss", "vi"),
+    ("tuoitre_kt", "https://tuoitre.vn/rss/kinh-te.rss", "vi"),
+    ("thanhnien_kt", "https://thanhnien.vn/rss/kinh-te.rss", "vi"),
+    ("vneconomy_taichinh", "https://vneconomy.vn/tai-chinh.rss", "vi"),
 ]
+
+
+def fetch_google_news_rss(
+    query: str,
+    lang: str = "en",
+    region: str = "US",
+    source_id: str | None = None,
+) -> pd.DataFrame:
+    """Google News RSS — free, no API key, supports any query + locale."""
+    from urllib.parse import quote_plus
+    src = source_id or f"gnews_{lang}"
+    url = (
+        f"https://news.google.com/rss/search?q={quote_plus(query)}"
+        f"&hl={lang}-{region}&gl={region}&ceid={region}:{lang}"
+    )
+    r = _http_get_with_retry(url)
+    if r is None:
+        return pd.DataFrame(columns=NEWS_SCHEMA)
+    try:
+        root = ET.fromstring(r.content)
+    except Exception as e:
+        log.warning(f"Google News RSS '{query}' parse failed: {e}")
+        return pd.DataFrame(columns=NEWS_SCHEMA)
+
+    rows = []
+    for item in root.findall(".//item"):
+        title = (item.findtext("title") or "").strip()
+        if not title:
+            continue
+        pub = item.findtext("pubDate") or ""
+        link = (item.findtext("link") or "").strip()
+        desc = (item.findtext("description") or "")[:500]
+        ts = None
+        for fmt in ("%a, %d %b %Y %H:%M:%S %z",
+                    "%a, %d %b %Y %H:%M:%S %Z",
+                    "%a, %d %b %Y %H:%M:%S GMT"):
+            try:
+                ts = datetime.strptime(pub, fmt)
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
+                break
+            except ValueError:
+                continue
+        if ts is None:
+            continue
+        domain = link.split("/")[2] if "://" in link else "news.google.com"
+        rows.append({
+            "ts": ts.astimezone(timezone.utc).isoformat(),
+            "date": ts.astimezone(timezone.utc).date().isoformat(),
+            "source": src,
+            "title": title,
+            "summary": desc,
+            "url": link,
+            "domain": domain,
+            "tone": None,
+            "lang": lang,
+        })
+    log.info(f"Google News '{query}' [{lang}/{region}]: {len(rows)} items")
+    return pd.DataFrame(rows, columns=NEWS_SCHEMA)
 
 
 def fetch_rss(source_id: str, url: str, lang: str,
@@ -228,8 +291,15 @@ def fetch_rss(source_id: str, url: str, lang: str,
     """Generic RSS fetcher. If `gold_filter=True`, keep only gold-related items
     (broad keyword match) to reduce noise from non-gold feeds like cafef-broad."""
     rows = []
-    keywords = ["gold", "vàng", "sjc", "bullion", "precious metal",
-                "kim loại quý", "fed", "usd", "lãi suất", "ngân hàng nhà nước"]
+    keywords = [
+        # English
+        "gold", "bullion", "precious metal", "fed", "usd", "inflation",
+        "treasury", "interest rate", "rate cut", "rate hike",
+        # Vietnamese
+        "vàng", "sjc", "kim loại quý", "lãi suất", "ngân hàng nhà nước",
+        "giá vàng", "đô la", "tỷ giá", "tài chính", "kinh tế vĩ mô",
+        "ngân hàng trung ương", "lạm phát", "vàng miếng",
+    ]
     r = _http_get_with_retry(url)
     if r is None:
         return pd.DataFrame(columns=NEWS_SCHEMA)
@@ -298,9 +368,20 @@ def fetch_all_realtime(
     """
     parts: list[pd.DataFrame] = []
 
-    df_gd = fetch_gdelt_doc_api(timespan="1d", max_records=150)
+    # Reduced GDELT cap so VN + other sources are visible in the dashboard mix
+    df_gd = fetch_gdelt_doc_api(timespan="1d", max_records=80)
     if not df_gd.empty:
         parts.append(df_gd)
+
+    # Google News RSS — language-specific gold queries (free, no key)
+    for q, lang, region, src_id in [
+        ("\"gold price\" OR bullion OR \"FED rate\"", "en", "US", "gnews_en"),
+        ("giá vàng SJC OR \"vàng miếng\"", "vi", "VN", "gnews_vi_sjc"),
+        ("ngân hàng nhà nước OR \"lãi suất\"", "vi", "VN", "gnews_vi_macro"),
+    ]:
+        df_g = fetch_google_news_rss(q, lang=lang, region=region, source_id=src_id)
+        if not df_g.empty:
+            parts.append(df_g)
 
     # Tone timeline (separate from article list — different GDELT mode)
     df_tone = fetch_gdelt_timeline_tone(timespan="1d")
