@@ -37,6 +37,9 @@ lightning_logs/
 *.ckpt
 checkpoints/
 wandb/
+# fine-tuned Chronos-Bolt model weights (~190MB per fold) — produced by
+# scripts/finetune_chronos.py; reproduce locally or via Colab notebook
+models/chronos_finetuned/
 
 # Data files: KEEP raw + processed snapshots, ignore large temp/intermediate
 data/raw/cache/

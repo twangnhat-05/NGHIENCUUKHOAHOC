@@ -174,7 +174,39 @@ git reset --hard milestone-N
 ### 10:35 — P7.6 Validation + commit
 - `pytest tests/` → 47/47 PASS in 1.58s ✅
 - `scripts/check_tex.py` → 22/22 citations OK, 7/7 figures OK, envs balanced
-- Sắp commit + tag `milestone-11-ieee-package` + push
+- Commit `b1d327a` + tag `milestone-11-ieee-package` pushed
+
+## 2026-04-27 (Session 2 — Phase 8 Option 3: Fine-tune Chronos-Bolt)
+
+### 10:55 — P8 kickoff
+- Branch: `claude/phase-8-execution` (from `claude/phase-7-execution`)
+- Tag checkpoint: `pre-phase-8`
+- Verified chronos-forecasting 2.2.2 installed, ChronosBoltModelForForecasting
+  has built-in pinball loss (`forward(context, target) -> ChronosBoltOutput.loss`)
+
+### 11:00 — P8.1 finetune_chronos.py
+- Sliding-window dataset (ctx=256, pred=64), AdamW (lr=1e-5)
+- Per-fold HF model.save_pretrained checkpoint to models/chronos_finetuned/fold_{k}/
+
+### 11:10 — P8.2 FineTunedChronosBoltForecaster wrapper added to foundation.py
+
+### 11:12 — P8.3 CPU smoke test (fold 0, 30 steps, bs=4): ✅ loss 55→15 in 11s
+### 11:13 — P8 wrapper sanity: predictions in [67.43, 67.63] vs actual [67.0, 67.4]
+
+### 11:15 — P8.4 CPU full fine-tune fold 0 (3 epochs, bs=8, 255 steps, 94s)
+- Loss converged 50 → 17 over 3 epochs
+
+### 11:16 — P8.5 Benchmark fold 0 (Ridge / ZS / FT × h=1,5,20):
+- ZS h=1=0.66%, h=5=0.72%, h=20=0.76%
+- FT h=1=0.42%, h=5=0.45%, h=20=0.49% — consistent -36% rel improvement
+- Saved reports/leaderboard/chronos_finetuned_{long,summary}.csv
+
+### 11:20 — P8.6 Colab notebook + paper update + gitignore
+- notebooks/finetune_chronos_colab.ipynb (7 cells, T4-ready, full 5-fold)
+- main.tex: new Section 4.7 + updated Future Work
+- .gitignore: models/chronos_finetuned/ (183MB per fold)
+- pytest 47/47 PASS, tex check clean
+- Sắp commit + tag `milestone-12-finetune-chronos` + push
 
 
 

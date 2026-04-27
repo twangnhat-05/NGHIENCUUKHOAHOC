@@ -101,6 +101,91 @@ class ChronosBoltForecaster(BaseForecaster):
 
 
 # ============================================================
+# CHRONOS-BOLT FINE-TUNED (per-fold checkpoint, P8)
+# ============================================================
+
+class FineTunedChronosBoltForecaster(BaseForecaster):
+    """Fine-tuned Chronos-Bolt loaded from a per-fold local HF directory.
+
+    Use after `python -m scripts.finetune_chronos` has produced
+    `models/chronos_finetuned/fold_{k}/` with the fine-tuned weights.
+
+    The forecaster expects `fold_id` to be set externally before predict()
+    (the trainer sets it via `model.fold_id = fold.fold_id` if available).
+    Otherwise it loads `fold_0` as a fallback.
+    """
+    name = "Chronos-Bolt-FT"
+    use_features = False
+
+    def __init__(
+        self,
+        horizon: int = 1,
+        checkpoint_root: str = "models/chronos_finetuned",
+        context_length: int = 256,
+        seed: int = 42,
+    ) -> None:
+        self.horizon = horizon
+        self.checkpoint_root = checkpoint_root
+        self.context_length = context_length
+        self.seed = seed
+        self.fold_id: int | None = None
+        self._pipeline = None
+        self._loaded_fold: int | None = None
+        self._train_target: np.ndarray | None = None
+        self._last_value: float | None = None
+
+    def _load_for_fold(self, fold_id: int) -> None:
+        from pathlib import Path as _P
+        from chronos import BaseChronosPipeline
+        import torch
+
+        fold_dir = _P(self.checkpoint_root) / f"fold_{fold_id}"
+        if not fold_dir.exists():
+            log.warning(f"Fine-tuned checkpoint missing: {fold_dir}; naive fallback")
+            self._pipeline = None
+            return
+        log.info(f"Loading fine-tuned Chronos-Bolt from {fold_dir}")
+        self._pipeline = BaseChronosPipeline.from_pretrained(
+            str(fold_dir), device_map="cpu", torch_dtype=torch.float32,
+        )
+        self._loaded_fold = fold_id
+
+    def fit(self, train_df: pd.DataFrame, target_col: str = "SJC_ban_ra", **kwargs) -> "FineTunedChronosBoltForecaster":
+        target_fold = self.fold_id if self.fold_id is not None else 0
+        if self._loaded_fold != target_fold:
+            self._load_for_fold(target_fold)
+
+        target = train_df[target_col].dropna().to_numpy().astype(np.float32)
+        if len(target) > self.context_length:
+            target = target[-self.context_length:]
+        self._train_target = target
+        self._last_value = float(target[-1])
+        return self
+
+    def predict(self, test_df: pd.DataFrame, h: int = 1) -> np.ndarray:
+        n = len(test_df)
+        if self._pipeline is None or self._train_target is None:
+            return np.full(n, self._last_value or 0.0)
+
+        import torch
+        try:
+            torch.manual_seed(self.seed)
+            context = torch.tensor(self._train_target)
+            quantiles, mean_pred = self._pipeline.predict_quantiles(
+                context, prediction_length=max(n, 1),
+                quantile_levels=[0.1, 0.5, 0.9],
+            )
+            arr = mean_pred.cpu().numpy() if hasattr(mean_pred, "cpu") else np.asarray(mean_pred)
+            arr = arr.flatten()
+            if len(arr) < n:
+                arr = np.concatenate([arr, np.full(n - len(arr), arr[-1])])
+            return arr[:n]
+        except Exception as e:
+            log.warning(f"Fine-tuned Chronos predict failed: {e}; naive fallback")
+            return np.full(n, self._last_value or 0.0)
+
+
+# ============================================================
 # TTM — Tiny Time Mixer (IBM)
 # ============================================================
 

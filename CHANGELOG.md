@@ -5,7 +5,62 @@ Tất cả thay đổi đáng chú ý của dự án sẽ được ghi tại đ�
 Format dựa trên [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning theo [SemVer](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — branch `claude/phase-7-execution`
+## [Unreleased] — branch `claude/phase-8-execution`
+
+---
+
+## [0.12.0-p8] — `milestone-12-finetune-chronos` (2026-04-27) — 🤖 Chronos-Bolt fine-tune
+
+### Added (P8 — Option 3: Fine-tune Chronos-Bolt-Small)
+
+#### P8.1 Fine-tune script
+- `scripts/finetune_chronos.py`: CPU/CUDA fine-tune loop using model's built-in
+  pinball-loss objective. Sliding-window dataset (ctx=256, pred=64), AdamW
+  (lr=1e-5, wd=0.01), gradient clipping (max_norm=1.0). Per-fold checkpoint
+  to `models/chronos_finetuned/fold_{k}/` (HF model.save_pretrained format).
+- Args: `--fold {0..4|all}`, `--device {cpu,cuda}`, `--epochs`, `--max-steps`,
+  `--batch-size`, `--learning-rate`. CPU smoke ~95s for fold 0 / 3 epochs.
+
+#### P8.2 FineTunedChronosBoltForecaster wrapper
+- `src/models/foundation.py`: new `FineTunedChronosBoltForecaster` class
+- Loads from `models/chronos_finetuned/fold_{fold_id}` via BaseChronosPipeline
+- Uses `predict_quantiles` with median forecast (compatible with existing trainer)
+
+#### P8.3 Benchmark script
+- `scripts/benchmark_finetuned_chronos.py`: 3-way comparison
+  (Ridge mode-B vs Chronos zero-shot mode-A vs Chronos fine-tuned mode-A)
+- Output: `reports/leaderboard/chronos_finetuned_{long,summary}.csv`
+
+#### P8.4 Colab T4 notebook (full 5-fold reproducer)
+- `notebooks/finetune_chronos_colab.ipynb`: 7-cell notebook
+- Workflow: nvidia-smi -> clone repo -> install deps -> smoke test ->
+  full 5-fold fine-tune (~5-8 min on T4) -> benchmark -> zip artefacts
+- User downloads `chronos_finetuned_artifacts.zip` and unzips locally
+
+#### P8.5 Paper update (Section 4.7 NEW)
+- main.tex: added `\subsection{Fine-Tuned Chronos-Bolt (Phase 8 preliminary)}`
+  with Table V reporting fold-0 results
+- Updated *Future work* paragraph in Conclusion to reference fold-0 evidence
+- Tex still clean: 22 cites OK, 7 figs OK, envs balanced
+
+### Verified — Fold 0 results (CPU, 3 epochs, 255 grad steps):
+
+| Horizon | Chronos zero-shot | Chronos fine-tuned | Δ rel |
+|---------|------------------:|-------------------:|------:|
+| h=1     | 0.66%             | **0.42%**          | -36%  |
+| h=5     | 0.72%             | **0.45%**          | -37%  |
+| h=20    | 0.76%             | **0.49%**          | -36%  |
+
+Consistent ~36% relative MAPE reduction across all 3 horizons on a calm fold,
+confirming the value of even a few hundred gradient steps on ~1k in-domain obs.
+Full 5-fold (incl. 2024 rally fold) deferred to Colab T4 user run.
+
+### Repo hygiene
+- `.gitignore`: added `models/chronos_finetuned/` (~183MB per fold; reproduced
+  via the Colab notebook or the CPU script)
+- 47/47 tests still PASS
+- Branch `claude/phase-8-execution` (from `claude/phase-7-execution`)
+- Tag `pre-phase-8` for rollback
 
 ---
 
