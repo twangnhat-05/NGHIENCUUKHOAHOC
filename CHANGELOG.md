@@ -5,9 +5,67 @@ Tất cả thay đổi đáng chú ý của dự án sẽ được ghi tại đ�
 Format dựa trên [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning theo [SemVer](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — branch `claude/auto-execution`
+## [Unreleased] — branch `claude/phase-2-execution`
 
-(All milestones completed — ready for user merge)
+(Phase 2 partial — Option 1 "Boost Paper" 3/4 done)
+
+---
+
+## [0.6.0-p2] — `milestone-6-phase2-boost` (2026-04-27)
+
+### Added (P2 Option 1: Boost Paper)
+
+#### A1. Real sentiment pipeline (DEMO end-to-end, limited historical)
+- `src/features/news_fetch.py`: multi-source scraper
+  - yfinance.Ticker.news cho 5 gold tickers (GLD/GC=F/GDX/IAU/SLV)
+  - Google News RSS EN ("gold price") + VN ("giá vàng SJC")
+  - CafeF RSS với keyword filter
+  - Output: `data/external/news_headlines.parquet` (218 headlines, 2025-10 → 2026-04)
+- `src/features/news_score.py`: mDeBERTa zero-shot scoring
+  - Model: MoritzLaurer/mDeBERTa-v3-base-mnli-xnli (~552MB)
+  - 3-class: positive/neutral/negative for gold price
+  - framework="pt" (PyTorch — Keras 3 incompat workaround)
+  - 218 headlines → 110 negative / 100 positive / 8 neutral, mean signed -0.071
+- `scripts/integrate_sentiment_and_rerun.py`: integration + benchmark compare
+
+**LIMITATION**: News data chỉ 2025-10 → 2026-04 (6 tháng gần đây). CV folds chạy 2022-2024 → KHÔNG có overlap → MAPE Δ = 0%. Pipeline verified working; cần historical news (Web Archive scrape / paid API) để có impact thực sự. Documented as Phase 3 future work.
+
+#### A3. Regime-aware ensemble
+- `src/models/regime.py`: `VolatilityRegimeDetector` (rolling 20-day std + threshold q=0.7 quantile train)
+- `src/models/ensemble_regime.py`: `RegimeAwareEnsemble`
+  - Stable regime: Ridge (0.45) + ElasticNet (0.45) + SeasonalNaive (0.10)
+  - Volatile regime: RollingNaive (0.50) + ElasticNet (0.30) + LightGBM (0.20)
+- 5 folds h=1 mean MAPE: 0.81% (all detected stable at train end)
+- **LIMITATION**: regime detected only at train-end. Cần re-detect trong val period để bắt 2024 rally bắt đầu sau train end. Documented.
+
+#### A5. Conformal full coverage report
+- `scripts/run_conformal_full.py`: ACI vs split conformal trên 3 ML models × 5 folds × 3 horizons
+- Output: `reports/figures/conformal_full_{table,summary}.csv` + `conformal_full_per_horizon.png`
+
+**KEY FINDINGS** (paper material):
+| Horizon | Method | Coverage avg (target 90%) | Width avg |
+|---|---|---|---|
+| h=1 | Split conformal | 75.8% (Ridge) — 79.3% (LGBM) | 1.4-6.8 |
+| h=1 | **ACI** | **86.0% Ridge/EN** | 1.7-1.9 |
+| h=5 | Split | 73.8-80.9% | 2.5-8 |
+| h=5 | **ACI** | **85.1-85.8%** Ridge/EN | 3.8-3.9 |
+| h=20 | Split | 65.6-74.9% | 6.6-11.7 |
+| h=20 | ACI | 72.4-75.8% | 7-9 |
+
+→ **ACI consistently outperforms split conformal at h=1, h=5** (~10 pp improvement)
+→ Volatile period (fold 3-4): split coverage drops to 5-22%, ACI maintains 60-90%
+→ Backs paper claim "ACI handles regime shifts" với evidence 45 (3 models × 5 folds × 3 horizons)
+
+### Tests: 47/47 PASS (no regression)
+
+### Deferred to Phase 3
+- Historical news scraping (Web Archive cho CafeF 2018-2024)
+- Rolling regime re-detection within val period (HMM hoặc CUSUM)
+- Fine-tune Chronos-Bolt trên SJC (A2 từ PHASE_2_PLAN)
+- Mobile PWA + Telegram bot (option 2 Production)
+- IEEE submission (D1)
+
+---
 
 ---
 
