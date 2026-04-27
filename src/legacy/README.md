@@ -1,6 +1,6 @@
 # Legacy Scripts (Frozen)
 
-Đây là source code gốc của dự án trước khi Claude Architect refactor (commit `pre-claude-v0`).
+Đây là source code gốc của dự án trước khi Architect refactor (commit `pre-refactor-v0`).
 
 **KHÔNG SỬA** các file trong folder này. Chúng được giữ lại để:
 1. Reproduce các kết quả cũ (output/ legacy plots)
@@ -24,7 +24,7 @@ Code mới sống trong `src/{data,features,models,training,evaluation,xai,utils
 ## Để chạy lại pipeline cũ
 ```bash
 cd src/legacy
-python download_data.py     # ⚠️ data path hardcoded "data/", phải symlink hoặc edit
+python download_data.py # ⚠️ data path hardcoded "data/", phải symlink hoặc edit
 python eda_merge_analysis.py
 python feature_engineering.py
 python compare_baselines.py

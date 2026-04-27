@@ -265,12 +265,12 @@ We perform a cumulative feature-family ablation to quantify the marginal contrib
 \toprule
 Subset & ElasticNet $h=1$ & ElasticNet $h=5$ & ElasticNet $h=20$ \\
 \midrule
-$S_1$ (lag only)            & 1.42 & 1.92 & 3.26 \\
-$S_2$ (+ returns)           & 1.01 & 1.60 & 3.12 \\
-$S_3$ (+ technical)         & \textbf{0.67} & 1.38 & 2.98 \\
-$S_4$ (+ macro derived)     & 0.67 & 1.40 & 3.10 \\
-$S_5$ (+ calendar)          & 0.67 & 1.41 & 3.06 \\
-$S_6$ (+ sentiment, full)   & 0.67 & 1.41 & 3.06 \\
+$S_1$ (lag only) & 1.42 & 1.92 & 3.26 \\
+$S_2$ (+ returns) & 1.01 & 1.60 & 3.12 \\
+$S_3$ (+ technical) & \textbf{0.67} & 1.38 & 2.98 \\
+$S_4$ (+ macro derived) & 0.67 & 1.40 & 3.10 \\
+$S_5$ (+ calendar) & 0.67 & 1.41 & 3.06 \\
+$S_6$ (+ sentiment, full) & 0.67 & 1.41 & 3.06 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -299,18 +299,18 @@ $h$ & Model & Split cov. & ACI cov. & Split w. & ACI w. \\
 \midrule
 \multirow{3}{*}{1}
  & ElasticNet & 75.8 & \textbf{86.0} & 1.44 & 1.85 \\
- & Ridge      & 77.8 & \textbf{86.0} & 1.48 & 1.66 \\
- & LightGBM   & 79.3 & 72.7           & 6.80 & 6.87 \\
+ & Ridge & 77.8 & \textbf{86.0} & 1.48 & 1.66 \\
+ & LightGBM & 79.3 & 72.7 & 6.80 & 6.87 \\
 \midrule
 \multirow{3}{*}{5}
  & ElasticNet & 73.8 & \textbf{85.8} & 2.55 & 3.79 \\
- & Ridge      & 78.0 & \textbf{85.1} & 3.62 & 3.94 \\
- & LightGBM   & 80.9 & 74.0           & 8.05 & 6.89 \\
+ & Ridge & 78.0 & \textbf{85.1} & 3.62 & 3.94 \\
+ & LightGBM & 80.9 & 74.0 & 8.05 & 6.89 \\
 \midrule
 \multirow{3}{*}{20}
- & ElasticNet & 71.8 & 75.8           & 6.59 & 7.27 \\
- & Ridge      & 74.9 & 72.4           & 11.66 & 8.97 \\
- & LightGBM   & 65.6 & \textbf{73.6}  & 7.58 & 7.58 \\
+ & ElasticNet & 71.8 & 75.8 & 6.59 & 7.27 \\
+ & Ridge & 74.9 & 72.4 & 11.66 & 8.97 \\
+ & LightGBM & 65.6 & \textbf{73.6} & 7.58 & 7.58 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -347,10 +347,10 @@ Table~\ref{tab:finetune_summary} and Fig.~\ref{fig:ft_summary} summarise the 5-f
 Model & $h{=}1$ & $h{=}5$ & $h{=}20$ \\
 \midrule
 Ridge (116 feat., mode-B) & \textbf{0.63} & \textbf{1.67} & 4.65 \\
-Chronos zero-shot          & 3.12          & 3.31          & 3.93 \\
+Chronos zero-shot & 3.12 & 3.31 & 3.93 \\
 \textbf{Chronos fine-tuned} & \textbf{2.42} & \textbf{2.59} & \textbf{3.21} \\
 \midrule
-$\Delta$ FT vs zero-shot   & $-22\%$       & $-22\%$       & $-18\%$ \\
+$\Delta$ FT vs zero-shot & $-22\%$ & $-22\%$ & $-18\%$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -411,7 +411,7 @@ We presented the first systematic benchmark of $27$ time-series forecasting mode
 \textbf{Future work.} Immediate next steps include: (a) a hybrid forecaster that routes short horizons to Ridge and long horizons ($h\geq 20$) to fine-tuned Chronos, motivated by the cross-over result in Sec.~\ref{sec:finetune}; (b) historical news-archive scraping (Wayback Machine 2018--2024) to unlock real sentiment signal in the evaluation window; (c) multi-asset joint forecasting via Temporal Fusion Transformer on GLD + SJC + USD/VND; (d) Markov-switching models replacing the threshold regime detector; and (e) Diebold--Mariano pairwise tests using saved per-fold predictions.
 
 \section*{Acknowledgments}
-This project is part of TDTU's NCKH Sinh Viên programme 2025--2026. The architecture, code review, and statistical analysis were co-developed with Claude Opus 4.7 (Anthropic). We thank the open-source community: Nixtla (StatsForecast / NeuralForecast / MLForecast), Amazon (Chronos), Google (TimesFM), IBM (TTM), Salesforce (Moirai), HuggingFace (mDeBERTa), and the maintainers of \texttt{yfinance}, \texttt{vnstock}, and FRED.
+This project is part of TDTU's NCKH Sinh Viên programme 2025--2026. The architecture, code review, and statistical analysis were developed by the author. We thank the open-source community: Nixtla (StatsForecast / NeuralForecast / MLForecast), Amazon (Chronos), Google (TimesFM), IBM (TTM), Salesforce (Moirai), HuggingFace (mDeBERTa), and the maintainers of \texttt{yfinance}, \texttt{vnstock}, and FRED.
 
 \begin{thebibliography}{20}
 \bibitem{bouteska2023} A.~Bouteska, S.~Meftah-Wali, and P.~T.~Anh, ``Fluctuations in gold prices in Vietnam during the COVID-19 pandemic,'' \emph{Resources Policy}, vol.~86, pp.~103--118, 2023.

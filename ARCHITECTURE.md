@@ -1,7 +1,7 @@
 # 🏛️ MASTER ARCHITECTURE — Gold Price Prediction (TDTU NCKH 2025-2026)
 
 > **Version**: v0.1 (Gate 3 draft — chờ user APPROVE)
-> **Author**: Claude Architect (Opus 4.7)
+> **Author**: Architect (Opus 4.7)
 > **Date**: 2026-04-26
 > **Project owner**: dev2@wolffungame.com (TDTU sinh viên NCKH)
 > **Deadline**: 2026-05 (cấp khoa) — **~5 tuần** từ hôm nay.
@@ -29,88 +29,88 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         DATA LAYER                                   │
+│ DATA LAYER │
 ├─────────────────────────────────────────────────────────────────────┤
-│  Raw sources (data/raw/):                                            │
-│   • SJC (webgia scraper, 2018-2026)                                  │
-│   • Gold Futures GC=F (yfinance)                                     │
-│   • USD Index DX-Y.NYB (yfinance) + DXY official (FRED DTWEXBGS)     │
-│   • VN-Index (vnstock VCI native)                                    │
-│   • Oil WTI CL=F (yfinance)                                          │
-│   • FED funds (FRED FEDFUNDS) + SBV policy rate (CSV manual)         │
-│   • USD/VND (yfinance VND=X) + CPI VN (FRED CPALTT01VNQ657N)         │
-│   • GLD ETF, BTC-USD (yfinance)                                      │
-│   • News headlines (CafeF/VnExpress gold tag) — scrape + cache       │
-│                                                                      │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │ src/data/fetch.py  (robust, retry, cache, schema validation) │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-│                              ↓                                       │
-│  Interim (data/interim/merged.parquet)                              │
-│   • Outer join trên Date, ffill (no bfill)                          │
-│   • Outlier flag (NOT clip — clip sẽ được fit-on-train-only)        │
+│ Raw sources (data/raw/): │
+│ • SJC (webgia scraper, 2018-2026) │
+│ • Gold Futures GC=F (yfinance) │
+│ • USD Index DX-Y.NYB (yfinance) + DXY official (FRED DTWEXBGS) │
+│ • VN-Index (vnstock VCI native) │
+│ • Oil WTI CL=F (yfinance) │
+│ • FED funds (FRED FEDFUNDS) + SBV policy rate (CSV manual) │
+│ • USD/VND (yfinance VND=X) + CPI VN (FRED CPALTT01VNQ657N) │
+│ • GLD ETF, BTC-USD (yfinance) │
+│ • News headlines (CafeF/VnExpress gold tag) — scrape + cache │
+│ │
+│ ┌──────────────────────────────────────────────────────────────┐ │
+│ │ src/data/fetch.py (robust, retry, cache, schema validation) │ │
+│ └──────────────────────────────────────────────────────────────┘ │
+│ ↓ │
+│ Interim (data/interim/merged.parquet) │
+│ • Outer join trên Date, ffill (no bfill) │
+│ • Outlier flag (NOT clip — clip sẽ được fit-on-train-only) │
 └──────────────────────────┬──────────────────────────────────────────┘
-                           ↓
+ ↓
 ┌─────────────────────────────────────────────────────────────────────┐
-│                       FEATURE LAYER                                  │
+│ FEATURE LAYER │
 ├─────────────────────────────────────────────────────────────────────┤
-│  src/features/build.py + technical.py + macro.py + sentiment.py     │
-│   • Lags: 1, 3, 5, 7, 14, 30 cho SJC + Gold + USD + Sentiment      │
-│   • Returns: simple + log returns, multi-period                      │
-│   • Technical: SMA(10/30/60), EMA, RSI(14), MACD, Bollinger,        │
-│     ATR, Stochastic, OBV, realized volatility (rolling std)          │
-│   • Macro: yield spread, real interest, CPI YoY, USD/VND change      │
-│   • Sentiment: PhoBERT-finetuned daily score (mean, count, polarity)│
-│   • Calendar: dow, dom, month, quarter, holidays VN                 │
-│                                                                      │
-│  Output: data/processed/features_v2.parquet                          │
+│ src/features/build.py + technical.py + macro.py + sentiment.py │
+│ • Lags: 1, 3, 5, 7, 14, 30 cho SJC + Gold + USD + Sentiment │
+│ • Returns: simple + log returns, multi-period │
+│ • Technical: SMA(10/30/60), EMA, RSI(14), MACD, Bollinger, │
+│ ATR, Stochastic, OBV, realized volatility (rolling std) │
+│ • Macro: yield spread, real interest, CPI YoY, USD/VND change │
+│ • Sentiment: PhoBERT-finetuned daily score (mean, count, polarity)│
+│ • Calendar: dow, dom, month, quarter, holidays VN │
+│ │
+│ Output: data/processed/features_v2.parquet │
 └──────────────────────────┬──────────────────────────────────────────┘
-                           ↓
+ ↓
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    SPLIT & CV LAYER                                  │
+│ SPLIT & CV LAYER │
 ├─────────────────────────────────────────────────────────────────────┤
-│  src/training/cv.py (walk-forward)                                   │
-│   • Final test: 2025-10-01 → 2026-04-25 (out-of-sample)             │
-│   • Walk-forward CV: 5 folds expanding window trên train             │
-│   • Mỗi fold: refit scaler, refit model, refit clip thresholds      │
-│   • Anti-leakage tests (tests/test_no_leakage.py)                    │
+│ src/training/cv.py (walk-forward) │
+│ • Final test: 2025-10-01 → 2026-04-25 (out-of-sample) │
+│ • Walk-forward CV: 5 folds expanding window trên train │
+│ • Mỗi fold: refit scaler, refit model, refit clip thresholds │
+│ • Anti-leakage tests (tests/test_no_leakage.py) │
 └──────────────────────────┬──────────────────────────────────────────┘
-                           ↓
+ ↓
 ┌─────────────────────────────────────────────────────────────────────┐
-│                       MODEL LAYER (5 tiers)                          │
+│ MODEL LAYER (5 tiers) │
 ├─────────────────────────────────────────────────────────────────────┤
-│ Tier 0 Trivial:    Naive, Seasonal Naive, Drift, SMA                │
-│ Tier 1 Classical:  AutoARIMA, AutoETS, Theta, Prophet, NeuralProphet│
-│ Tier 2 ML:         Linear, SVR, RF, XGB, LightGBM, CatBoost, Stack │
-│ Tier 3 DL:         LSTM, GRU, TCN, N-HiTS, PatchTST, iTransformer, │
-│                    TFT, TimeMixer, TSMixer                          │
-│ Tier 4 Foundation: Chronos-Bolt, TTM (IBM), TimesFM, Lag-Llama,    │
-│                    Moirai-MoE  — zero-shot + fine-tune              │
-│ Tier 5 Ensemble:   Inverse-RMSE weighted, Stacking, Conformal calib │
-│                                                                      │
-│  Tuning: Optuna (TPE, 50-100 trials/model).                         │
-│  Tracking: MLflow (mlruns/).                                         │
+│ Tier 0 Trivial: Naive, Seasonal Naive, Drift, SMA │
+│ Tier 1 Classical: AutoARIMA, AutoETS, Theta, Prophet, NeuralProphet│
+│ Tier 2 ML: Linear, SVR, RF, XGB, LightGBM, CatBoost, Stack │
+│ Tier 3 DL: LSTM, GRU, TCN, N-HiTS, PatchTST, iTransformer, │
+│ TFT, TimeMixer, TSMixer │
+│ Tier 4 Foundation: Chronos-Bolt, TTM (IBM), TimesFM, Lag-Llama, │
+│ Moirai-MoE — zero-shot + fine-tune │
+│ Tier 5 Ensemble: Inverse-RMSE weighted, Stacking, Conformal calib │
+│ │
+│ Tuning: Optuna (TPE, 50-100 trials/model). │
+│ Tracking: MLflow (mlruns/). │
 └──────────────────────────┬──────────────────────────────────────────┘
-                           ↓
+ ↓
 ┌─────────────────────────────────────────────────────────────────────┐
-│                  EVALUATION & XAI LAYER                              │
+│ EVALUATION & XAI LAYER │
 ├─────────────────────────────────────────────────────────────────────┤
-│ Metrics:  MAE, RMSE, MAPE, sMAPE, MASE, R², DA, Hit Rate, CRPS     │
-│ Tests:    Diebold-Mariano (pairwise), Friedman + Nemenyi (group)    │
-│ PI:       Nixtla ConformalIntervals + MAPIE EnbPI/ACI               │
-│ XAI:      SHAP (TreeExplainer for ML), Captum IG (DL),              │
-│           TFT attention weights, TimeSHAP                            │
-│ Output:   reports/leaderboard/{horizon}/results.csv + figures        │
+│ Metrics: MAE, RMSE, MAPE, sMAPE, MASE, R², DA, Hit Rate, CRPS │
+│ Tests: Diebold-Mariano (pairwise), Friedman + Nemenyi (group) │
+│ PI: Nixtla ConformalIntervals + MAPIE EnbPI/ACI │
+│ XAI: SHAP (TreeExplainer for ML), Captum IG (DL), │
+│ TFT attention weights, TimeSHAP │
+│ Output: reports/leaderboard/{horizon}/results.csv + figures │
 └──────────────────────────┬──────────────────────────────────────────┘
-                           ↓
+ ↓
 ┌─────────────────────────────────────────────────────────────────────┐
-│                      DELIVERY LAYER                                  │
+│ DELIVERY LAYER │
 ├─────────────────────────────────────────────────────────────────────┤
-│  app/streamlit_app.py     (Streamlit Cloud — public demo)           │
-│  app/api/main.py          (FastAPI optional — Render free)          │
-│  notebooks/99_reproduce_all.ipynb (one-click reproducibility)        │
-│  reports/paper/tdtu_vi/   (Word, VN)                                │
-│  reports/paper/ieee_en/   (LaTeX, English, conference-ready)        │
+│ app/streamlit_app.py (Streamlit Cloud — public demo) │
+│ app/api/main.py (FastAPI optional — Render free) │
+│ notebooks/99_reproduce_all.ipynb (one-click reproducibility) │
+│ reports/paper/tdtu_vi/ (Word, VN) │
+│ reports/paper/ieee_en/ (LaTeX, English, conference-ready) │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -120,75 +120,72 @@
 
 ```
 NCKH/
-├── .claude/
-│   ├── settings.local.json (gitignored)
-│   └── skills/                 # Skill factory
-├── .github/workflows/          # (optional) CI: lint + test
+├── .github/workflows/ # CI: lint + test
 ├── app/
-│   ├── streamlit_app.py
-│   └── api/main.py             # FastAPI
-├── configs/                    # YAML configs (no hardcoded constants)
-│   ├── data.yaml
-│   ├── features.yaml
-│   ├── cv.yaml
-│   └── models/
-│       ├── xgboost.yaml
-│       ├── lightgbm.yaml
-│       ├── lstm.yaml
-│       ├── patchtst.yaml
-│       ├── tft.yaml
-│       ├── chronos.yaml
-│       └── ttm.yaml
+│ ├── streamlit_app.py
+│ └── api/main.py # FastAPI
+├── configs/ # YAML configs (no hardcoded constants)
+│ ├── data.yaml
+│ ├── features.yaml
+│ ├── cv.yaml
+│ └── models/
+│ ├── xgboost.yaml
+│ ├── lightgbm.yaml
+│ ├── lstm.yaml
+│ ├── patchtst.yaml
+│ ├── tft.yaml
+│ ├── chronos.yaml
+│ └── ttm.yaml
 ├── data/
-│   ├── raw/                    # immutable, append-only
-│   ├── interim/                # merged + ffill
-│   ├── processed/              # features + splits
-│   └── external/               # news, sentiment cache
+│ ├── raw/ # immutable, append-only
+│ ├── interim/ # merged + ffill
+│ ├── processed/ # features + splits
+│ └── external/ # news, sentiment cache
 ├── notebooks/
-│   ├── 00_eda_v2.ipynb
-│   ├── 01_features_v2.ipynb
-│   ├── 02_baselines.ipynb
-│   ├── 03_ml_models.ipynb
-│   ├── 04_dl_models.ipynb
-│   ├── 05_foundation_models.ipynb
-│   ├── 06_ensembling_conformal.ipynb
-│   ├── 07_xai.ipynb
-│   └── 99_reproduce_all.ipynb
+│ ├── 00_eda_v2.ipynb
+│ ├── 01_features_v2.ipynb
+│ ├── 02_baselines.ipynb
+│ ├── 03_ml_models.ipynb
+│ ├── 04_dl_models.ipynb
+│ ├── 05_foundation_models.ipynb
+│ ├── 06_ensembling_conformal.ipynb
+│ ├── 07_xai.ipynb
+│ └── 99_reproduce_all.ipynb
 ├── src/
-│   ├── data/{fetch,refresh,schema}.py
-│   ├── features/{build,technical,macro,sentiment,calendar}.py
-│   ├── models/{classical,ml,dl,foundation,ensemble}.py
-│   ├── training/{cv,tune,trainer}.py
-│   ├── evaluation/{metrics,stat_tests,conformal,leaderboard}.py
-│   ├── xai/{shap_utils,attention}.py
-│   ├── utils/{logging,seeds,io}.py
-│   └── legacy/                  # current scripts moved here, kept frozen
+│ ├── data/{fetch,refresh,schema}.py
+│ ├── features/{build,technical,macro,sentiment,calendar}.py
+│ ├── models/{classical,ml,dl,foundation,ensemble}.py
+│ ├── training/{cv,tune,trainer}.py
+│ ├── evaluation/{metrics,stat_tests,conformal,leaderboard}.py
+│ ├── xai/{shap_utils,attention}.py
+│ ├── utils/{logging,seeds,io}.py
+│ └── legacy/ # current scripts moved here, kept frozen
 ├── tests/
-│   ├── test_features.py
-│   ├── test_cv_no_leakage.py
-│   ├── test_metrics.py
-│   └── test_data_schema.py
+│ ├── test_features.py
+│ ├── test_cv_no_leakage.py
+│ ├── test_metrics.py
+│ └── test_data_schema.py
 ├── reports/
-│   ├── figures/
-│   ├── leaderboard/
-│   └── paper/
-│       ├── tdtu_vi/report.docx
-│       └── ieee_en/{main.tex, bib.bib, figures/}
+│ ├── figures/
+│ ├── leaderboard/
+│ └── paper/
+│ ├── tdtu_vi/report.docx
+│ └── ieee_en/{main.tex, bib.bib, figures/}
 ├── scripts/
-│   ├── refresh_data.sh
-│   ├── train_all.sh
-│   └── reproduce.sh
-├── output/                     # legacy outputs (kept for traceability)
-├── mlruns/                     # MLflow tracking (gitignored)
-├── pyproject.toml              # ruff/black/pytest config
-├── requirements.txt            # pinned ==
+│ ├── refresh_data.sh
+│ ├── train_all.sh
+│ └── reproduce.sh
+├── output/ # legacy outputs (kept for traceability)
+├── mlruns/ # MLflow tracking (gitignored)
+├── pyproject.toml # ruff/black/pytest config
+├── requirements.txt # pinned ==
 ├── requirements-dev.txt
-├── environment.yml             # conda alt
+├── environment.yml # conda alt
 ├── README.md
 ├── CHANGELOG.md
-├── ARCHITECTURE.md             # this file
+├── ARCHITECTURE.md # this file
 ├── CITATION.cff
-├── LICENSE                     # MIT
+├── LICENSE # MIT
 ├── MONITORING.md
 ├── CLAUDE_EXECUTION_LOG.md
 └── BM02_decuong.pdf
@@ -204,7 +201,7 @@ python==3.11
 pandas==2.2.3
 numpy==1.26.4
 scipy==1.14.1
-pyarrow==17.0.0   # parquet
+pyarrow==17.0.0 # parquet
 pyyaml==6.0.2
 tqdm==4.66.5
 
@@ -217,7 +214,7 @@ lxml==5.3.0
 pandas-datareader==0.10.0
 
 # Classical TS
-statsforecast==1.7.8       # AutoARIMA, AutoETS, Theta, MSTL
+statsforecast==1.7.8 # AutoARIMA, AutoETS, Theta, MSTL
 prophet==1.1.6
 neuralprophet==0.9.0
 
@@ -231,15 +228,15 @@ mlforecast==0.13.4
 
 # DL stack
 torch==2.4.1+cpu
-neuralforecast==1.7.5      # PatchTST, iTransformer, NHITS, TFT, TimeMixer, TSMixer
-darts==0.30.0              # backup, also has TFT/PatchTST
+neuralforecast==1.7.5 # PatchTST, iTransformer, NHITS, TFT, TimeMixer, TSMixer
+darts==0.30.0 # backup, also has TFT/PatchTST
 
 # Foundation models
 chronos-forecasting==1.4.1
-uni2ts==1.2.0               # Moirai
+uni2ts==1.2.0 # Moirai
 timesfm==1.2.6
 # lag-llama: clone from github
-transformers==4.45.2        # for FinBERT/PhoBERT/mDeBERTa
+transformers==4.45.2 # for FinBERT/PhoBERT/mDeBERTa
 
 # Conformal
 mapie==0.9.2
@@ -337,11 +334,11 @@ pre-commit==4.0.1
 - **Final test set** (out-of-sample, không touch trong CV): **2025-10-01 → 2026-04-25** (~7 tháng)
 - **Train+Val (CV)**: 2018-01-01 → 2025-09-30
 - **Walk-forward CV**: 5 folds expanding window
-  - Fold 1: train 2018-2021, val 2022-Q1
-  - Fold 2: train 2018-2022Q1, val 2022Q2-Q3
-  - Fold 3: train 2018-2022Q3, val 2022Q4-2023Q1
-  - Fold 4: train 2018-2023Q1, val 2023Q2-Q3
-  - Fold 5: train 2018-2023Q3, val 2023Q4-2024
+ - Fold 1: train 2018-2021, val 2022-Q1
+ - Fold 2: train 2018-2022Q1, val 2022Q2-Q3
+ - Fold 3: train 2018-2022Q3, val 2022Q4-2023Q1
+ - Fold 4: train 2018-2023Q1, val 2023Q2-Q3
+ - Fold 5: train 2018-2023Q3, val 2023Q4-2024
 - Refit scaler + clip thresholds + model PER fold (no leakage).
 
 ### 6.2 Metrics (mỗi horizon h ∈ {1, 5, 20})

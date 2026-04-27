@@ -24,9 +24,6 @@ env/
 # Notebooks state
 .ipynb_checkpoints/
 
-# Local Claude/HF cache
-.claude/settings.local.json
-
 # Lightning logs (regenerated)
 lightning_logs/
 mlruns/

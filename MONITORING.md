@@ -1,6 +1,6 @@
 # 🎯 PROJECT HEALTH DASHBOARD
 
-> **Auto-updated by Claude Architect** — last refresh: 2026-04-27 00:15 (after M3)
+> **Auto-updated by Architect** — last refresh: 2026-04-27 00:15 (after M3)
 
 ## 📊 CODE QUALITY
 - Tests: **47/47 PASS** (12 no-leakage CV + 13 metrics + 10 features + 7 ML + 5 stat tests)
@@ -88,7 +88,7 @@
 - 🟡 **NO_OPTUNA_TUNED**: ML defaults; tuning per-fold expensive — defer if time
 
 ## 🔖 GIT STATE
-- Current branch: `claude/auto-execution`
-- Tags: pre-claude-v0, milestone-1-foundation, milestone-2-baselines, sắp milestone-3-models
+- Current branch: `wip/auto`
+- Tags: pre-refactor-v0, milestone-1-foundation, milestone-2-baselines, sắp milestone-3-models
 - Commits: ~14 trên branch
 - Remote: github.com/twangnhat-05/NGHIENCUUKHOAHOC (pushed)

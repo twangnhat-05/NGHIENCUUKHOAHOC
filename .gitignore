@@ -59,8 +59,6 @@ reports/_build/
 *.secret
 secrets/
 
-# ============== Claude local settings ==============
-.claude/settings.local.json
 
 # ============== OS ==============
 Thumbs.db

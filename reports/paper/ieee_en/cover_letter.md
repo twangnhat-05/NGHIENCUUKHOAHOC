@@ -32,7 +32,7 @@ We have no conflict of interest with any potential reviewer beyond standard co-a
 
 ## Author contributions and contact
 
-WangNhat (corresponding author) led the data engineering, model implementation, experiment design, and manuscript drafting. Statistical-test design and architecture review were conducted in collaboration with **Claude Opus 4.7 (Anthropic)**, used as a tooling assistant under the TDTU NCKH supervision; all final decisions, scientific claims, and reported numbers are the human author's responsibility.
+WangNhat (corresponding author) led the data engineering, model implementation, experiment design, and manuscript drafting. Statistical-test design and architecture review were conducted all final decisions, scientific claims, and reported numbers are the human author's responsibility.
 
 We thank you in advance for considering our submission and look forward to your feedback.
 

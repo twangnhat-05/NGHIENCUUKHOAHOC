@@ -40,7 +40,7 @@
 
 - [ ] No plagiarised passages — paraphrase, cite, or quote.
 - [ ] No data collected from proprietary or paid sources without licence; all sources here are free-tier.
-- [ ] AI-tooling disclosure in *Acknowledgments* matches what was actually used (Claude Opus 4.7 for architecture review, code drafting, statistical-test wiring).
+- [ ] AI-tooling disclosure (if any) in *Acknowledgments* matches what was actually used.
 - [ ] Human author owns final responsibility for every claim in the paper.
 - [ ] No PII or sensitive trading positions anywhere in the data.
 
@@ -61,7 +61,7 @@
 - [ ] Project tag `paper-submission-vN` is pushed to GitHub.
 - [ ] Slack / email reminder set 1 week before notification deadline.
 - [ ] Calendar reminder for camera-ready deadline.
-- [ ] `MEMORY.md` updated with submission status (so the next Claude session has context).
+- [ ] `MEMORY.md` updated with submission status (so the next next session has context).
 
 ---
 

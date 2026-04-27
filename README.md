@@ -9,7 +9,7 @@
 [![CI](https://github.com/twangnhat-05/NGHIENCUUKHOAHOC/actions/workflows/ci.yml/badge.svg)](https://github.com/twangnhat-05/NGHIENCUUKHOAHOC/actions/workflows/ci.yml)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3119/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Status](https://img.shields.io/badge/status-active-success.svg)]()
+[![Status](https://img.shields.io/badge/status-active-success.svg)]
 [![Tests: 47 passing](https://img.shields.io/badge/tests-47%20passing-brightgreen.svg)](tests/)
 [![Models: 25](https://img.shields.io/badge/models-25%20benchmarked-blue.svg)](reports/leaderboard/)
 
@@ -26,25 +26,25 @@ Xem [`ARCHITECTURE.md`](ARCHITECTURE.md) để biết chi tiết.
 ```
 NCKH/
 ├── data/
-│   ├── raw/         # CSV gốc, immutable
-│   ├── interim/     # merged + ffill
-│   ├── processed/   # features V2 + splits
-│   └── external/    # news, sentiment cache
+│ ├── raw/ # CSV gốc, immutable
+│ ├── interim/ # merged + ffill
+│ ├── processed/ # features V2 + splits
+│ └── external/ # news, sentiment cache
 ├── src/
-│   ├── data/        # fetch, refresh, schema
-│   ├── features/    # technical, macro, sentiment, calendar
-│   ├── models/      # classical, ml, dl, foundation, ensemble
-│   ├── training/    # cv (walk-forward), tune (optuna), trainer
-│   ├── evaluation/  # metrics, stat_tests (DM, Friedman), conformal
-│   ├── xai/         # SHAP, attention, TimeSHAP
-│   ├── utils/       # logging, seeds, io
-│   └── legacy/      # FROZEN — code gốc trước Claude refactor
-├── notebooks/       # 00..99 — EDA → models → ensemble → reproduce
-├── tests/           # pytest, no-leakage gates
-├── configs/         # YAML configs (no hardcoded constants)
-├── app/             # streamlit + fastapi
-├── reports/         # figures, leaderboard, paper (TDTU + IEEE)
-└── scripts/         # bash helpers
+│ ├── data/ # fetch, refresh, schema
+│ ├── features/ # technical, macro, sentiment, calendar
+│ ├── models/ # classical, ml, dl, foundation, ensemble
+│ ├── training/ # cv (walk-forward), tune (optuna), trainer
+│ ├── evaluation/ # metrics, stat_tests (DM, Friedman), conformal
+│ ├── xai/ # SHAP, attention, TimeSHAP
+│ ├── utils/ # logging, seeds, io
+│ └── legacy/ # FROZEN — code gốc trước refactor
+├── notebooks/ # 00..99 — EDA → models → ensemble → reproduce
+├── tests/ # pytest, no-leakage gates
+├── configs/ # YAML configs (no hardcoded constants)
+├── app/ # streamlit + fastapi
+├── reports/ # figures, leaderboard, paper (TDTU + IEEE)
+└── scripts/ # bash helpers
 ```
 
 ## ⚡ Quickstart
@@ -54,7 +54,7 @@ NCKH/
 git clone https://github.com/twangnhat-05/NGHIENCUUKHOAHOC.git
 cd NGHIENCUUKHOAHOC
 python -m venv .venv
-.venv\Scripts\activate   # Windows
+.venv\Scripts\activate # Windows
 pip install -r requirements.txt
 ```
 
@@ -70,7 +70,7 @@ python -m src.features.build
 
 ### 4. Train baselines
 ```bash
-python -m src.models.classical       # AutoARIMA, Prophet, ETS
+python -m src.models.classical # AutoARIMA, Prophet, ETS
 python -m src.models.ml --model xgboost --tune
 ```
 
@@ -126,7 +126,7 @@ black src/ tests/
 
 # Tests
 pytest -v
-pytest -m no_leakage    # critical anti-leakage gates
+pytest -m no_leakage # critical anti-leakage gates
 pytest --cov=src --cov-report=html
 ```
 
@@ -138,16 +138,15 @@ Xem [`reports/paper/ieee_en/bib.bib`](reports/paper/ieee_en/bib.bib).
 
 - Open-source community: Nixtla (statsforecast/neuralforecast/mlforecast), Amazon Chronos, Google TimesFM, IBM Granite TTM, Salesforce Moirai
 - TDTU advisor (TBD)
-- Co-architected with Claude Opus 4.7 (Anthropic)
-
+- Architected by the author.
 ## 📄 Citation
 
 Nếu sử dụng code này, vui lòng cite (xem [`CITATION.cff`](CITATION.cff)):
 ```bibtex
 @misc{wangnhat2026goldforecast,
-  author = {WangNhat},
-  title  = {Vietnamese Gold Price Forecasting with Foundation Models and Conformal Prediction},
-  year   = {2026},
-  url    = {https://github.com/twangnhat-05/NGHIENCUUKHOAHOC}
+ author = {WangNhat},
+ title = {Vietnamese Gold Price Forecasting with Foundation Models and Conformal Prediction},
+ year = {2026},
+ url = {https://github.com/twangnhat-05/NGHIENCUUKHOAHOC}
 }
 ```

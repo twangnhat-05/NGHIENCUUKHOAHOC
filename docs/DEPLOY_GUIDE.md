@@ -9,7 +9,7 @@
 
 ### Yêu cầu
 - ✅ Repo GitHub đã có code (đã xong: `twangnhat-05/NGHIENCUUKHOAHOC`)
-- ✅ Branch `main` (hoặc `claude/auto-execution`) đã push
+- ✅ Branch `main` (hoặc `wip/auto`) đã push
 - ✅ File `app/streamlit_app.py` (đã có)
 - ✅ File `requirements.txt` (đã có, pinned)
 - ❌ Cần: tài khoản Streamlit Cloud (đăng ký free bằng GitHub)
@@ -21,34 +21,34 @@
 
 ### Bước 2 — Trước khi deploy: chuẩn bị repo
 
-**Quan trọng**: branch `main` hiện vẫn rỗng. Bạn cần MERGE branch `claude/auto-execution` vào `main` trước:
+**Quan trọng**: branch `main` hiện vẫn rỗng. Bạn cần MERGE branch `wip/auto` vào `main` trước:
 
 ```bash
 cd D:\WangNhat\Study\NCKH
 git checkout main
-git merge claude/auto-execution --no-ff -m "merge: full project from claude/auto-execution"
+git merge wip/auto --no-ff -m "merge: full project from wip/auto"
 git push origin main
 ```
 
-Hoặc nếu muốn test trước, có thể deploy thẳng từ branch `claude/auto-execution`.
+Hoặc nếu muốn test trước, có thể deploy thẳng từ branch `wip/auto`.
 
 ### Bước 3 — Tạo Streamlit App
 
 1. Vào dashboard Streamlit Cloud → click **"New app"**
 2. Form điền:
-   - **Repository**: `twangnhat-05/NGHIENCUUKHOAHOC`
-   - **Branch**: `main` (hoặc `claude/auto-execution` nếu chưa merge)
-   - **Main file path**: `app/streamlit_app.py`
-   - **App URL**: tùy chỉnh, ví dụ `gold-sjc-tdtu` → URL sẽ là `https://gold-sjc-tdtu.streamlit.app`
+ - **Repository**: `twangnhat-05/NGHIENCUUKHOAHOC`
+ - **Branch**: `main` (hoặc `wip/auto` nếu chưa merge)
+ - **Main file path**: `app/streamlit_app.py`
+ - **App URL**: tùy chỉnh, ví dụ `gold-sjc-tdtu` → URL sẽ là `https://gold-sjc-tdtu.streamlit.app`
 3. **Python version**: Streamlit Cloud sẽ auto-detect từ `requirements.txt` (cần Python 3.11). Nếu app fail, vào Settings → Advanced settings → set Python version = `3.11`
 4. Click **"Deploy!"**
 
 ### Bước 4 — Chờ build (5-15 phút)
 
 - Streamlit Cloud sẽ:
-  1. Clone repo
-  2. `pip install -r requirements.txt` (~5-10 phút vì có torch, prophet, neuralforecast)
-  3. Start `streamlit run app/streamlit_app.py`
+ 1. Clone repo
+ 2. `pip install -r requirements.txt` (~5-10 phút vì có torch, prophet, neuralforecast)
+ 3. Start `streamlit run app/streamlit_app.py`
 - Theo dõi build log realtime trong dashboard
 
 ### Bước 5 — Lỗi thường gặp & fix
@@ -56,17 +56,17 @@ Hoặc nếu muốn test trước, có thể deploy thẳng từ branch `claude/
 **❌ Build fails: "out of memory" khi cài torch/prophet**
 - Streamlit Cloud free tier có 1GB RAM build → có thể fail với heavy deps
 - **Fix**: tạo file `requirements-streamlit.txt` chỉ với deps tối thiểu cho dashboard:
-  ```
-  pandas==2.2.3
-  numpy==1.26.4
-  pyarrow==17.0.0
-  pyyaml==6.0.2
-  scikit-learn==1.5.2
-  matplotlib==3.9.2
-  seaborn==0.13.2
-  plotly==5.24.1
-  streamlit==1.56.0
-  ```
+ ```
+ pandas==2.2.3
+ numpy==1.26.4
+ pyarrow==17.0.0
+ pyyaml==6.0.2
+ scikit-learn==1.5.2
+ matplotlib==3.9.2
+ seaborn==0.13.2
+ plotly==5.24.1
+ streamlit==1.56.0
+ ```
 - Vào Streamlit settings → "Custom requirements file" → set thành `requirements-streamlit.txt`
 - Lưu ý: Predictions tab (cần ElasticNet) vẫn hoạt động vì sklearn
 
@@ -94,15 +94,15 @@ Hoặc nếu muốn test trước, có thể deploy thẳng từ branch `claude/
 
 ```yaml
 services:
-  - type: web
-    name: gold-sjc-api
-    runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.api.main:app --host 0.0.0.0 --port $PORT
-    plan: free
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11
+ - type: web
+ name: gold-sjc-api
+ runtime: python
+ buildCommand: pip install -r requirements.txt
+ startCommand: uvicorn app.api.main:app --host 0.0.0.0 --port $PORT
+ plan: free
+ envVars:
+ - key: PYTHON_VERSION
+ value: 3.11
 ```
 
 ### Bước 2 — Đăng ký Render
@@ -117,10 +117,10 @@ services:
 
 - URL sẽ có dạng: `https://gold-sjc-api.onrender.com`
 - Endpoints:
-  - `GET /` — health
-  - `GET /predict?h=1` — forecast
-  - `GET /docs` — Swagger UI
-  - `GET /leaderboard?h=1` — top models
+ - `GET /` — health
+ - `GET /predict?h=1` — forecast
+ - `GET /docs` — Swagger UI
+ - `GET /leaderboard?h=1` — top models
 
 ### ⚠️ Render free tier limitations
 - **Sleep sau 15 phút không request** → cold start ~30s lần đầu
@@ -142,12 +142,12 @@ services:
 1. Vào https://huggingface.co → đăng ký
 2. Click **"+ New"** → **"Space"**
 3. Form:
-   - **Owner**: username của bạn
-   - **Space name**: `gold-sjc-tdtu`
-   - **License**: MIT
-   - **SDK**: Streamlit
-   - **Hardware**: CPU basic (free)
-   - **Visibility**: Public
+ - **Owner**: username của bạn
+ - **Space name**: `gold-sjc-tdtu`
+ - **License**: MIT
+ - **SDK**: Streamlit
+ - **Hardware**: CPU basic (free)
+ - **Visibility**: Public
 4. Click **"Create Space"**
 
 ### Bước 2 — Push code lên HF Space
@@ -155,7 +155,7 @@ services:
 ```bash
 # HF Spaces là 1 git repo riêng
 git remote add huggingface https://huggingface.co/spaces/<your-username>/gold-sjc-tdtu
-git push huggingface claude/auto-execution:main
+git push huggingface wip/auto:main
 
 # Cần cài git-lfs nếu có file lớn (foundation model weights)
 git lfs install
@@ -215,9 +215,9 @@ curl https://gold-sjc-api.onrender.com/predict?h=1
 ### Share cho hội đồng TDTU
 ```
 🌐 Demo dashboard: https://<your-app>.streamlit.app
-📊 API endpoints:  https://gold-sjc-api.onrender.com/docs
-📁 Source code:   https://github.com/twangnhat-05/NGHIENCUUKHOAHOC
-📄 Báo cáo:       reports/paper/tdtu_vi/report.docx
+📊 API endpoints: https://gold-sjc-api.onrender.com/docs
+📁 Source code: https://github.com/twangnhat-05/NGHIENCUUKHOAHOC
+📄 Báo cáo: reports/paper/tdtu_vi/report.docx
 ```
 
 ---
@@ -243,4 +243,4 @@ curl https://gold-sjc-api.onrender.com/predict?h=1
 
 ---
 
-🤖 *Generated by Claude Opus 4.7 — TDTU NCKH 2026*
+🤖 *Generated by — TDTU NCKH 2026*

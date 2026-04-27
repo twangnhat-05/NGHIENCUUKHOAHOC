@@ -96,9 +96,9 @@ Giá vàng Việt Nam (vàng miếng SJC) thường xuyên biến động bất 
 
 ```
 Raw data (11 nguồn) → Merge + ffill → Features V2 (108 cols)
-   → Walk-forward CV (5 fold) → 24 models × 3 horizons × 5 folds
-   → Leaderboard + Friedman test → ACI Conformal PI → SHAP XAI
-   → Streamlit dashboard + FastAPI
+ → Walk-forward CV (5 fold) → 24 models × 3 horizons × 5 folds
+ → Leaderboard + Friedman test → ACI Conformal PI → SHAP XAI
+ → Streamlit dashboard + FastAPI
 ```
 
 ### 4.2 Dữ liệu (11 nguồn miễn phí)
@@ -401,7 +401,7 @@ ChronosBolt(model_id="amazon/chronos-bolt-small", context_length=256)
 git clone https://github.com/twangnhat-05/NGHIENCUUKHOAHOC
 cd NGHIENCUUKHOAHOC
 pip install -r requirements.txt
-bash scripts/reproduce_all.sh   # ~70 phút trên CPU
+bash scripts/reproduce_all.sh # ~70 phút trên CPU
 streamlit run app/streamlit_app.py
 ```
 
@@ -409,5 +409,5 @@ streamlit run app/streamlit_app.py
 
 - **Tác giả**: WangNhat (TDTU)
 - **GVHD**: TBD
-- **Co-architected with**: Claude Opus 4.7 (Anthropic) — pipeline design, code review, statistical analysis assistance.
+- **Co-architected with**:  — pipeline design, code review, statistical analysis assistance.
 - **Open-source community**: Nixtla (statsforecast/neuralforecast/mlforecast), Amazon (Chronos), IBM (TTM), Google (TimesFM), Salesforce (Moirai), Hugging Face.
