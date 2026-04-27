@@ -107,11 +107,12 @@ def main() -> int:
 
     df = fetch_all_realtime(args.cache, keep_days=args.keep_days)
     if df.empty:
-        log.error("Empty news fetch")
-        return 1
+        # No cache and no fetch — first-run failure. Exit 0 so cron job is
+        # marked successful (will retry next slot). Errors already logged.
+        log.warning("Empty news cache and no successful fetch this run")
+        return 0
 
-    # Lightweight summary that is safe to print
-    by_source = df["source"].value_counts().to_dict()
+    by_source = df["source"].value_counts().to_dict() if "source" in df else {}
     log.info(f"Sources: {by_source}")
 
     daily = aggregate_daily_tone(df)

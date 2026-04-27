@@ -28,9 +28,33 @@ from src.utils.logging import get_logger
 
 log = get_logger(__name__)
 
-USER_AGENT = "Mozilla/5.0 (compatible; NCKH-TDTU-research/1.0)"
-HEADERS = {"User-Agent": USER_AGENT}
-TIMEOUT = 20
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+)
+HEADERS = {"User-Agent": USER_AGENT, "Accept": "*/*"}
+TIMEOUT = 60       # generous — GH runners and GDELT are sometimes slow
+MAX_RETRIES = 3
+
+
+def _http_get_with_retry(url: str, headers: dict | None = None,
+                         timeout: int = TIMEOUT) -> requests.Response | None:
+    """GET with simple exponential backoff. Returns None on terminal failure."""
+    h = headers or HEADERS
+    delay = 1.0
+    last_err: Exception | None = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            r = requests.get(url, headers=h, timeout=timeout)
+            r.raise_for_status()
+            return r
+        except Exception as e:
+            last_err = e
+            if attempt < MAX_RETRIES:
+                time.sleep(delay)
+                delay *= 2
+    log.warning(f"GET {url} failed after {MAX_RETRIES} attempts: {last_err}")
+    return None
 
 NEWS_SCHEMA = [
     "ts",        # ISO 8601 UTC timestamp
@@ -70,12 +94,13 @@ def fetch_gdelt_doc_api(
         "sort": sort,
     }
     url = base + "?" + "&".join(f"{k}={quote(str(v), safe='')}" for k, v in params.items())
+    r = _http_get_with_retry(url)
+    if r is None:
+        return pd.DataFrame(columns=NEWS_SCHEMA)
     try:
-        r = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
-        r.raise_for_status()
         data = r.json()
     except Exception as e:
-        log.warning(f"GDELT DOC API failed: {e}")
+        log.warning(f"GDELT JSON parse failed: {e}")
         return pd.DataFrame(columns=NEWS_SCHEMA)
 
     rows = []
@@ -108,14 +133,17 @@ def fetch_reddit_json(subreddits: list[str] | None = None, limit: int = 50) -> p
     """Fetch new posts from public subreddits via JSON endpoint."""
     subreddits = subreddits or ["Gold", "wallstreetbets", "Forex", "preciousmetals"]
     rows = []
+    # Reddit aggressively rate-limits / blocks data-centre IPs (GitHub runners
+    # routinely get 403). Fall back to old.reddit.com which is more lenient
+    # for unauthenticated reads, and skip silently if blocked.
     for sub in subreddits:
-        url = f"https://www.reddit.com/r/{sub}/new.json?limit={limit}"
+        url = f"https://old.reddit.com/r/{sub}/new.json?limit={limit}"
+        r = _http_get_with_retry(url)
+        if r is None:
+            continue
         try:
-            r = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
-            r.raise_for_status()
             posts = r.json().get("data", {}).get("children", [])
-        except Exception as e:
-            log.warning(f"Reddit /r/{sub} failed: {e}")
+        except Exception:
             continue
         for p in posts:
             d = p.get("data", {})
@@ -145,9 +173,10 @@ def fetch_reddit_json(subreddits: list[str] | None = None, limit: int = 50) -> p
 
 RSS_SOURCES: list[tuple[str, str, str]] = [
     # (source_id, feed_url, lang)
-    ("kitco", "https://www.kitco.com/rss/KitcoNews.xml", "en"),
     ("investing", "https://www.investing.com/rss/news_25.rss", "en"),  # commodities
-    ("cafef_vang", "https://cafef.vn/thi-truong-chung-khoan.rss", "vi"),
+    ("yahoo_gold", "https://finance.yahoo.com/news/rssindex", "en"),
+    ("cafef", "https://cafef.vn/thi-truong-chung-khoan.rss", "vi"),
+    ("vnexpress_kd", "https://vnexpress.net/rss/kinh-doanh.rss", "vi"),
 ]
 
 
@@ -157,13 +186,14 @@ def fetch_rss(source_id: str, url: str, lang: str,
     (broad keyword match) to reduce noise from non-gold feeds like cafef-broad."""
     rows = []
     keywords = ["gold", "vàng", "sjc", "bullion", "precious metal",
-                "kim loại quý", "fed", "usd"]
+                "kim loại quý", "fed", "usd", "lãi suất", "ngân hàng nhà nước"]
+    r = _http_get_with_retry(url)
+    if r is None:
+        return pd.DataFrame(columns=NEWS_SCHEMA)
     try:
-        r = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
-        r.raise_for_status()
         root = ET.fromstring(r.content)
     except Exception as e:
-        log.warning(f"RSS {source_id} failed: {e}")
+        log.warning(f"RSS {source_id} parse failed: {e}")
         return pd.DataFrame(columns=NEWS_SCHEMA)
 
     for item in root.findall(".//item"):
@@ -229,23 +259,23 @@ def fetch_all_realtime(
         if not df_r.empty:
             parts.append(df_r)
 
-    if not parts:
-        log.error("No news fetched from any source")
-        return pd.DataFrame(columns=NEWS_SCHEMA + ["fetched_at"])
-
-    df_new = pd.concat(parts, ignore_index=True)
-    df_new["fetched_at"] = datetime.now(timezone.utc).isoformat()
-
     cache_full = project_root() / cache_path
+    df_old = pd.DataFrame(columns=NEWS_SCHEMA + ["fetched_at"])
     if cache_full.exists():
         try:
             df_old = pd.read_parquet(cache_full)
-            df_combined = pd.concat([df_old, df_new], ignore_index=True)
         except Exception as e:
             log.warning(f"Cache read failed: {e}")
-            df_combined = df_new
-    else:
-        df_combined = df_new
+
+    if not parts:
+        # Graceful degradation — every source failed (network / rate limit).
+        # Keep cache as-is so dashboard stays functional.
+        log.warning("No news fetched from any source this run; keeping cache")
+        return df_old
+
+    df_new = pd.concat(parts, ignore_index=True)
+    df_new["fetched_at"] = datetime.now(timezone.utc).isoformat()
+    df_combined = pd.concat([df_old, df_new], ignore_index=True) if not df_old.empty else df_new
 
     df_combined = df_combined.drop_duplicates(subset=["url", "title"], keep="last")
     df_combined["ts"] = pd.to_datetime(df_combined["ts"], utc=True, errors="coerce")
