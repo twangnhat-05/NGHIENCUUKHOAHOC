@@ -1,0 +1,91 @@
+name: data-daily-refresh
+
+on:
+  schedule:
+    # 02:00 UTC == 09:00 ICT — sau khi SJC mở phiên sáng
+    - cron: "0 2 * * *"
+  workflow_dispatch: {}   # manual trigger
+
+permissions:
+  contents: write   # commit refreshed parquet back
+
+concurrency:
+  group: data-daily
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps (data refresh + features pipeline)
+        run: |
+          python -m pip install --upgrade pip
+          pip install \
+            pandas \
+            pyarrow \
+            pyyaml \
+            requests \
+            beautifulsoup4 \
+            lxml \
+            numpy \
+            scikit-learn \
+            scipy \
+            yfinance \
+            vnstock \
+            pandas-datareader
+
+      - name: Refresh raw data (yfinance + FRED + webgia + vnstock)
+        run: |
+          python -m src.data.refresh || echo "::warning::Some sources failed; continuing with cached raw data"
+
+      - name: Rebuild merged + features
+        run: |
+          python -m src.data.merge
+          python -m src.features.build
+          python -m src.features.sentiment stub
+
+      - name: Show data freshness
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          for p in [
+              "data/interim/merged.parquet",
+              "data/processed/features_v2.parquet",
+              "data/processed/features_v2_with_sentiment.parquet",
+          ]:
+              try:
+                  df = pd.read_parquet(p)
+                  if "Date" in df.columns:
+                      d_min = pd.to_datetime(df["Date"]).min().date()
+                      d_max = pd.to_datetime(df["Date"]).max().date()
+                      print(f"{p}: {len(df)} rows, {d_min} -> {d_max}")
+                  else:
+                      print(f"{p}: {len(df)} rows (no Date column)")
+              except Exception as e:
+                  print(f"{p}: read failed -- {e}")
+          PY
+
+      - name: Commit refreshed artefacts (if changed)
+        run: |
+          git config user.name "data-bot"
+          git config user.email "data-bot@users.noreply.github.com"
+          git add data/raw/*.csv \
+                  data/interim/*.parquet \
+                  data/processed/*.parquet 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No data changes — skipping commit"
+          else
+            git commit -m "chore(data): daily refresh $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push
+          fi
