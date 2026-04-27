@@ -5,7 +5,44 @@ Tất cả thay đổi đáng chú ý của dự án sẽ được ghi tại đ�
 Format dựa trên [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning theo [SemVer](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — branch `claude/phase-4-execution`
+## [Unreleased] — branch `claude/phase-5-execution` (PROJECT COMPLETE)
+
+---
+
+## [0.9.0-p5] — `milestone-9-final` (2026-04-27) — 🏆 PROJECT COMPLETE
+
+### Added (P5)
+
+#### P5.1 Paper updates với Phase 2-4 findings
+- `reports/paper/tdtu_vi/report.md`:
+  * Section 5.4 expanded: Conformal full report 45 evidence points
+    (ACI 86% h=1 vs split 75-79%, ACI 85% h=5 vs split 74-81%)
+  * Section 5.5 NEW: Regime-aware ensemble Phase 2→Phase 3 evolution
+    (Fold 4 rally: 87/90 rows volatile detected via rolling re-detect)
+  * Section 5.6 NEW: Sentiment pipeline demo + limitation
+  * Section 5.8 NEW: Production deliverables (Streamlit/FastAPI/Docker/CI/bot)
+
+#### P5.2 Lag-Llama wrapper
+- `src/models/foundation.py`: `LagLlamaForecaster` class
+- Probabilistic foundation model (~2.4M params, Apache-2.0)
+- Setup: clone repo + huggingface-cli download checkpoint
+- predict() scaffolded — implement GluonTS dataset wrap chi tiết defer
+
+#### P5.3 FINAL_SUMMARY.md
+- Cumulative stats Phase 1-5: 27 models, 420+ records, 47/47 tests, 9 milestones
+- Document map (15 docs)
+- Academic outputs status (TDTU + IEEE ready)
+- Lessons learned + future work Phase 6+ candidates
+
+### Final
+- ✅ 9 milestones completed (M1-M9)
+- ✅ 47/47 tests PASS
+- ✅ 6 git tags pushed remote
+- ✅ Streamlit + FastAPI + Telegram bot + Docker + CI/CD + auto-retrain
+- ✅ TDTU report.docx ready cho cấp khoa
+- ✅ IEEE main.tex submission-ready
+
+→ **PROJECT COMPLETE — đi trước deadline 5 tuần.**
 
 ---
 

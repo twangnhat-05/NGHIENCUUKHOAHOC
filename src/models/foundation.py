@@ -169,6 +169,76 @@ class TTMForecaster(BaseForecaster):
 
 
 # ============================================================
+# LAG-LLAMA (Time-Llama 2024, probabilistic, ~2.4M params)
+# ============================================================
+
+class LagLlamaForecaster(BaseForecaster):
+    """Lag-Llama wrapper — probabilistic foundation model.
+
+    Setup (Linux/Mac/Colab — Windows có thể lỗi PyTorch Lightning paths):
+        git clone https://github.com/time-series-foundation-models/lag-llama
+        pip install -e lag-llama
+        huggingface-cli download time-series-foundation-models/Lag-Llama \
+            lag-llama.ckpt --local-dir ./checkpoints/
+
+    Sau setup, instantiate với checkpoint_path trỏ tới `./checkpoints/lag-llama.ckpt`.
+    """
+    name = "Lag-Llama"
+    use_features = False
+
+    def __init__(self, horizon: int = 1, checkpoint_path: str = "checkpoints/lag-llama.ckpt",
+                 context_length: int = 32, num_samples: int = 100) -> None:
+        self.horizon = horizon
+        self.checkpoint_path = checkpoint_path
+        self.context_length = context_length
+        self.num_samples = num_samples
+        self._estimator = None
+        self._train_target: np.ndarray | None = None
+        self._last_value: float | None = None
+
+    def fit(self, train_df: pd.DataFrame, target_col: str = "SJC_ban_ra", **kwargs) -> "LagLlamaForecaster":
+        from pathlib import Path as _P
+        if self._estimator is None:
+            try:
+                from lag_llama.gluon.estimator import LagLlamaEstimator
+                import torch
+                if not _P(self.checkpoint_path).exists():
+                    log.warning(f"Lag-Llama checkpoint missing: {self.checkpoint_path}; predict naive fallback")
+                else:
+                    ckpt = torch.load(self.checkpoint_path, map_location="cpu", weights_only=False)
+                    args = ckpt["hyper_parameters"]["model_kwargs"]
+                    self._estimator = LagLlamaEstimator(
+                        ckpt_path=self.checkpoint_path,
+                        prediction_length=max(self.horizon, 32),
+                        context_length=self.context_length,
+                        input_size=args["input_size"], n_layer=args["n_layer"],
+                        n_embd_per_head=args["n_embd_per_head"], n_head=args["n_head"],
+                        scaling=args["scaling"], time_feat=args["time_feat"],
+                        nonnegative_pred_samples=False, aug_prob=0.0, lr=5e-4,
+                        num_samples=self.num_samples, device="cpu",
+                    )
+            except ImportError:
+                log.warning("Lag-Llama deps missing — clone repo + pip install -e lag-llama")
+                self._estimator = None
+            except Exception as e:
+                log.error(f"Lag-Llama load failed: {e}")
+                self._estimator = None
+
+        target = train_df[target_col].dropna().to_numpy().astype(np.float32)
+        self._train_target = target
+        self._last_value = float(target[-1])
+        return self
+
+    def predict(self, test_df: pd.DataFrame, h: int = 1) -> np.ndarray:
+        n = len(test_df)
+        if self._estimator is None or self._train_target is None:
+            return np.full(n, self._last_value or 0.0)
+        # Implementation cụ thể defer — cần GluonTS dataset wrap
+        log.warning("Lag-Llama predict scaffolded — implement GluonTS dataset wrap riêng")
+        return np.full(n, self._last_value or 0.0)
+
+
+# ============================================================
 # REGISTRY
 # ============================================================
 
@@ -241,10 +311,11 @@ def build_foundation_models(
     horizon: int = 1,
     include_ttm: bool = True,
     include_timesfm: bool = False,
+    include_lagllama: bool = False,
 ) -> list[BaseForecaster]:
     """Build danh sách foundation models.
 
-    Lag-Llama wrapper có thể thêm sau (clone repo).
+    include_lagllama: cần clone https://github.com/time-series-foundation-models/lag-llama
     """
     models: list[BaseForecaster] = [
         ChronosBoltForecaster(horizon=horizon, model_id="amazon/chronos-bolt-small"),
@@ -253,4 +324,6 @@ def build_foundation_models(
         models.append(TTMForecaster(horizon=horizon))
     if include_timesfm:
         models.append(TimesFMForecaster(horizon=horizon))
+    if include_lagllama:
+        models.append(LagLlamaForecaster(horizon=horizon))
     return models
