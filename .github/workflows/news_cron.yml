@@ -1,0 +1,52 @@
+name: news-realtime-refresh
+
+on:
+  schedule:
+    # Every 30 minutes — well within the 2,000 min/month free-tier budget
+    # (≈ 96 runs/day × 30 days ≈ 2,880 runs, but each run is < 30s on the
+    # free runner, so total compute ≈ 1,440 runner-seconds/day ≈ 720 min/month).
+    - cron: "*/30 * * * *"
+  workflow_dispatch: {}   # manual trigger from the Actions tab
+
+permissions:
+  contents: write   # needed to commit the refreshed parquet back
+
+concurrency:
+  group: news-realtime
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install minimal deps
+        run: |
+          python -m pip install --upgrade pip
+          # Only the deps the news pipeline actually needs — fast install
+          pip install pandas pyarrow requests
+
+      - name: Refresh news cache
+        run: python -m scripts.refresh_news_realtime --keep-days 90
+
+      - name: Commit updated parquet (if changed)
+        run: |
+          git config user.name "news-bot"
+          git config user.email "news-bot@users.noreply.github.com"
+          if git diff --quiet -- data/external/news_realtime.parquet; then
+            echo "No news changes — skipping commit"
+          else
+            git add data/external/news_realtime.parquet
+            git commit -m "chore(news): auto-refresh $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push
+          fi

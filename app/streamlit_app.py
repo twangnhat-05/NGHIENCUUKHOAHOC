@@ -14,6 +14,7 @@ import sys
 import warnings
 from pathlib import Path
 
+import altair as alt
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -122,10 +123,10 @@ st.sidebar.markdown(
 
 
 # ============================================================
-# MAIN: 4 TABS
+# MAIN: 5 TABS (added 🔴 Live News in Phase 9)
 # ============================================================
-tab_overview, tab_leaderboard, tab_predict, tab_xai = st.tabs(
-    ["📊 Overview", "🏆 Leaderboard", "📈 Predictions", "🔍 XAI / SHAP"]
+tab_overview, tab_leaderboard, tab_predict, tab_xai, tab_news = st.tabs(
+    ["📊 Overview", "🏆 Leaderboard", "📈 Predictions", "🔍 XAI / SHAP", "🔴 Live News"]
 )
 
 
@@ -317,6 +318,105 @@ with tab_xai:
         )
     else:
         st.info("Chưa có ACI plot. Chạy `scripts/run_xai_conformal_demo.py`.")
+
+
+# ============================================================
+# TAB 5: 🔴 LIVE NEWS (Phase 9 — real-time gold-relevant news)
+# ============================================================
+with tab_news:
+    st.subheader("🔴 Real-time gold-relevant news")
+    st.caption(
+        "Aggregated từ GDELT 2.0 + Reddit + RSS feeds (free tier, không API key). "
+        "GDELT cung cấp tone -100..+100; refresh cron 15 phút qua GitHub Actions."
+    )
+
+    @st.cache_data(ttl=300)  # 5-min cache
+    def _load_news_realtime():
+        p = _PROJECT_ROOT / "data" / "external" / "news_realtime.parquet"
+        if not p.exists():
+            return pd.DataFrame()
+        df = pd.read_parquet(p)
+        df["ts"] = pd.to_datetime(df["ts"], utc=True, errors="coerce")
+        return df.dropna(subset=["ts"]).sort_values("ts", ascending=False)
+
+    news_df = _load_news_realtime()
+
+    if news_df.empty:
+        st.warning(
+            "Chưa có news data. Chạy `python -m scripts.refresh_news_realtime` "
+            "để fetch lần đầu, hoặc đợi GitHub Actions cron."
+        )
+    else:
+        # ── headline metrics ─────────────────────────────────
+        last_ts = news_df["ts"].max()
+        age_min = (pd.Timestamp.utcnow() - last_ts).total_seconds() / 60
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Tổng tin (90 ngày)", f"{len(news_df):,}")
+        col2.metric("Nguồn", news_df["source"].nunique())
+        col3.metric("Tin mới nhất", f"{age_min:.0f} phút trước")
+        gd = news_df[news_df["source"] == "gdelt"].copy()
+        gd["tone"] = pd.to_numeric(gd["tone"], errors="coerce")
+        if not gd.empty:
+            today_tone = gd[gd["date"] == gd["date"].max()]["tone"].mean()
+            col4.metric("GDELT tone hôm nay", f"{today_tone:+.2f}",
+                        help="-100 (rất tiêu cực) → +100 (rất tích cực)")
+
+        # ── sentiment trend chart ────────────────────────────
+        if not gd.empty:
+            daily = (
+                gd.groupby("date")
+                .agg(tone=("tone", "mean"), n=("tone", "count"))
+                .reset_index()
+                .tail(30)
+            )
+            chart = (
+                alt.Chart(daily)
+                .mark_line(point=True, color="#1565C0")
+                .encode(
+                    x=alt.X("date:T", title="Ngày"),
+                    y=alt.Y("tone:Q", title="GDELT tone trung bình",
+                            scale=alt.Scale(zero=False)),
+                    tooltip=["date", "tone", "n"],
+                )
+                .properties(height=220)
+            )
+            zero_rule = (
+                alt.Chart(pd.DataFrame({"y": [0]}))
+                .mark_rule(strokeDash=[4, 4], color="#9E9E9E")
+                .encode(y="y:Q")
+            )
+            st.altair_chart(chart + zero_rule, use_container_width=True)
+
+        # ── source breakdown ─────────────────────────────────
+        st.markdown("**Phân bố theo nguồn (90 ngày):**")
+        src_counts = news_df["source"].value_counts().reset_index()
+        src_counts.columns = ["source", "n"]
+        st.dataframe(src_counts, use_container_width=True, hide_index=True)
+
+        # ── latest headlines ─────────────────────────────────
+        st.markdown("**📰 Tin mới nhất (top 30):**")
+        recent = news_df.head(30).copy()
+        recent["khi nào"] = (
+            (pd.Timestamp.utcnow() - recent["ts"]).dt.total_seconds() / 60
+        ).round().astype(int).astype(str) + " phút"
+        recent["tone"] = pd.to_numeric(recent["tone"], errors="coerce").round(1)
+        display = recent[["khi nào", "source", "title", "tone", "url"]].rename(
+            columns={"source": "nguồn", "title": "tiêu đề", "url": "link"}
+        )
+        st.dataframe(
+            display,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "link": st.column_config.LinkColumn("link", display_text="↗"),
+            },
+        )
+
+        st.caption(
+            "ℹ️ Để score sentiment cho Reddit/RSS (mDeBERTa zero-shot), chạy: "
+            "`python -m scripts.refresh_news_realtime --score-recent 50` "
+            "(mất ~30s/50 tin trên CPU)."
+        )
 
 
 st.markdown("---")
