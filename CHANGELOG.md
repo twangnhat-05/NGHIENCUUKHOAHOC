@@ -9,6 +9,54 @@ versioning theo [SemVer](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.13.0-p8] — `milestone-13-finetune-fullfold` (2026-04-27) — 🌐 Full 5-fold Colab benchmark
+
+### Added (P8 follow-up after user Colab T4 run)
+
+#### P8.7 Full 5-fold Colab T4 benchmark integrated
+- User executed `notebooks/finetune_chronos_colab.ipynb` on free Colab T4 GPU
+- 5 folds × 5 epochs × ~85 steps/epoch ≈ 425 grad steps per fold (~8 min wall-clock)
+- Output integrated:
+  * `reports/leaderboard/chronos_finetuned_long.csv` (45 records — all 5 folds × 3 horizons × 3 models)
+  * `reports/leaderboard/chronos_finetuned_summary.csv` (5-fold mean+std)
+- Sanity check: per-fold log shows expected loss decay; benchmark numbers
+  consistent with fold-0 CPU result we shipped at M12
+
+### KEY 5-FOLD RESULTS (mean MAPE % across 5 folds)
+
+| Horizon | Ridge (mode-B, 116 feat.) | ZeroShot | FineTuned | FT vs ZS |
+|---------|---------------------------|----------|-----------|----------|
+| h=1     | **0.63** ⭐               | 3.12     | 2.42      | -22%     |
+| h=5     | **1.67** ⭐               | 3.31     | 2.59      | -22%     |
+| h=20    | 4.65                      | 3.93     | **3.21** ⭐ | -18%     |
+
+Three new findings vs M12 fold-0 only:
+1. **FT consistently beats ZS at all horizons** (18-22% relative).
+2. **FT overtakes Ridge at h=20** (3.21 vs 4.65 = -31% rel) — first time
+   fine-tuned foundation beats engineered-linear in this study.
+3. **Fold 3 (2024 rally) most stressful** for both: ZS h=1 collapses to
+   8.35%, FT recovers -38% rel (5.16%). Fold 4 marginal gain because
+   train slice itself contains regime change.
+
+#### P8.8 Two new publication figures (300 DPI)
+- `fig8_finetune_summary.png` — 5-fold mean MAPE bar chart (Ridge / ZS / FT) per horizon
+- `fig9_finetune_per_fold.png` — per-fold MAPE h=1 with shaded fold-3 highlight
+
+#### P8.9 Section 4.7 rewritten with full results
+- Replaced fold-0 preliminary table with 5-fold Table V
+- Added Fig. 8 + Fig. 9 references
+- 3-paragraph discussion of findings (FT helps consistently / overtakes
+  Ridge at h=20 / shines under regime shift)
+- Future Work updated: hybrid Ridge+FT-Chronos forecaster motivated by
+  h=20 cross-over
+
+### Verified
+- ✅ pytest 47/47 PASS
+- ✅ Tex sanity: 22 cites, 9 figures, envs balanced
+- ✅ Word count up ~600 → ~4836 tokens (~10-11 pages IEEE 2-col estimated)
+
+---
+
 ## [0.12.0-p8] — `milestone-12-finetune-chronos` (2026-04-27) — 🤖 Chronos-Bolt fine-tune
 
 ### Added (P8 — Option 3: Fine-tune Chronos-Bolt-Small)

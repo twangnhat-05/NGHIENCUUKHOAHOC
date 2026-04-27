@@ -247,6 +247,69 @@ def fig7_friedman():
     plt.close(fig)
 
 
+def fig8_finetune_summary():
+    """Mean MAPE across 5 folds — Ridge vs Chronos zero-shot vs Chronos fine-tuned."""
+    df = pd.read_csv("reports/leaderboard/chronos_finetuned_summary.csv")
+    horizons = [1, 5, 20]
+    models = ["Ridge", "Chronos-Bolt-ZeroShot", "Chronos-Bolt-FineTuned"]
+    colors = {"Ridge": "#2E7D32", "Chronos-Bolt-ZeroShot": "#90A4AE",
+              "Chronos-Bolt-FineTuned": "#1565C0"}
+    fig, ax = plt.subplots(figsize=(6.4, 3.2))
+    width = 0.27
+    x = np.arange(len(horizons))
+    for i, model in enumerate(models):
+        sub = df[df["model"] == model].set_index("horizon").loc[horizons]
+        bars = ax.bar(x + (i - 1) * width, sub["MAPE_mean"], width,
+                      yerr=sub["MAPE_std"], color=colors[model],
+                      ecolor="black", capsize=3.0,
+                      label=model.replace("Chronos-Bolt-", "Chronos "))
+        for bar, val in zip(bars, sub["MAPE_mean"]):
+            ax.text(bar.get_x() + bar.get_width() / 2, val + 0.15,
+                    f"{val:.2f}", ha="center", fontsize=7)
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"$h={h}$" for h in horizons])
+    ax.set_ylabel("MAPE (%) — mean$\\pm$std across 5 folds")
+    ax.set_title("Fine-tuning Chronos-Bolt-Small on SJC (5-fold benchmark)")
+    ax.legend(frameon=False, fontsize=8, loc="upper left")
+    ax.grid(axis="y", linestyle=":", alpha=0.4)
+    ax.set_axisbelow(True)
+    fig.tight_layout()
+    fig.savefig(OUT_DIR / "fig8_finetune_summary.png", dpi=DPI, bbox_inches="tight")
+    plt.close(fig)
+
+
+def fig9_finetune_per_fold():
+    """Per-fold MAPE — Chronos fine-tuned vs zero-shot at h=1, highlighting fold 3 (2024 rally)."""
+    df = pd.read_csv("reports/leaderboard/chronos_finetuned_long.csv")
+    sub = df[(df["horizon"] == 1) & (df["model"].str.startswith("Chronos"))].copy()
+    fig, ax = plt.subplots(figsize=(6.0, 3.2))
+    folds = sorted(sub["fold"].unique())
+    width = 0.36
+    x = np.arange(len(folds))
+    zs = sub[sub["model"] == "Chronos-Bolt-ZeroShot"].set_index("fold").loc[folds, "MAPE"]
+    ft = sub[sub["model"] == "Chronos-Bolt-FineTuned"].set_index("fold").loc[folds, "MAPE"]
+    ax.bar(x - width / 2, zs.values, width, color="#90A4AE", label="Zero-shot")
+    ax.bar(x + width / 2, ft.values, width, color="#1565C0", label="Fine-tuned")
+    for i, (zv, fv) in enumerate(zip(zs.values, ft.values)):
+        ax.text(x[i] - width / 2, zv + 0.2, f"{zv:.2f}", ha="center", fontsize=7)
+        ax.text(x[i] + width / 2, fv + 0.2, f"{fv:.2f}", ha="center", fontsize=7,
+                color="#0D47A1", fontweight="bold")
+    # Highlight fold 3 (2024 rally)
+    ax.axvspan(2.55, 3.45, alpha=0.10, color="red", zorder=0)
+    ax.text(3, max(zs) * 0.95, "2024 rally\nregime shift", ha="center",
+            fontsize=7, color="darkred", style="italic")
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"Fold {f}" for f in folds])
+    ax.set_ylabel("MAPE (%) at $h=1$")
+    ax.set_title("Per-fold MAPE — Chronos zero-shot vs fine-tuned, $h{=}1$")
+    ax.legend(frameon=False, fontsize=8, loc="upper left")
+    ax.grid(axis="y", linestyle=":", alpha=0.4)
+    ax.set_axisbelow(True)
+    fig.tight_layout()
+    fig.savefig(OUT_DIR / "fig9_finetune_per_fold.png", dpi=DPI, bbox_inches="tight")
+    plt.close(fig)
+
+
 def main() -> int:
     fig1_leaderboard_h1()
     fig2_leaderboard_h5_h20()
@@ -255,6 +318,8 @@ def main() -> int:
     fig5_conformal_per_fold()
     fig6_shap_top10()
     fig7_friedman()
+    fig8_finetune_summary()
+    fig9_finetune_per_fold()
     print(f"All figures written to {OUT_DIR.resolve()}")
     for p in sorted(OUT_DIR.glob("*.png")):
         print(f"  {p.name}: {p.stat().st_size // 1024} KB")

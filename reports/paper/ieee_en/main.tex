@@ -331,28 +331,53 @@ $h$ & Model & Split cov. & ACI cov. & Split w. & ACI w. \\
 
 The aggregate picture is that ACI lifts coverage of the linear models from $\sim$$76\%$ to $\sim$$86\%$ at $h\in\{1,5\}$ (a $+10$\,pp marginal gain) at the cost of $\sim$$1$--$30\%$ wider intervals. For LightGBM the picture is more mixed: split conformal already returns wide intervals because LightGBM's per-fold residuals are heavy-tailed in the 2024 rally, and ACI does not reduce miscoverage further. The per-fold view (Fig.~\ref{fig:conformal_per_fold}) makes the regime-shift impact stark: ElasticNet split conformal achieves $99\%$, $100\%$, $89\%$ coverage in folds $0, 1, 2$, then collapses to $9\%$ in fold $3$ and $82\%$ in fold $4$. ACI maintains $\geq 80\%$ throughout, recovering quickly after the regime shift.
 
-\subsection{Fine-Tuned Chronos-Bolt (Phase 8 preliminary)}
+\subsection{Fine-Tuned Chronos-Bolt}
 \label{sec:finetune}
-The cold-start zero-shot result of $3.07\%$ MAPE in Sec.~4.1 motivated us to fine-tune Chronos-Bolt-Small on each walk-forward fold's training slice using the model's built-in pinball-loss objective and AdamW (lr $=10^{-5}$, batch $=8$, 3 epochs, 255 gradient steps, sliding-window context $256$, prediction $64$). On fold~0 (the calmest pre-2023 regime) the fine-tuned model yields the results in Table~\ref{tab:finetune_fold0}.
+The cold-start zero-shot result of $3.07\%$ MAPE in Sec.~4.1 motivated us to fine-tune Chronos-Bolt-Small on each walk-forward fold's training slice using the model's built-in pinball-loss objective and AdamW (lr $= 10^{-5}$, weight decay $0.01$, batch 32, 5 epochs, sliding-window context $256$, prediction $64$, gradient clipping $1.0$). The full 5-fold benchmark runs in $\sim$8 minutes on a single Colab T4 GPU; we release the notebook (\texttt{notebooks/finetune\_chronos\_colab.ipynb}) for direct reproducibility.
+
+Table~\ref{tab:finetune_summary} and Fig.~\ref{fig:ft_summary} summarise the 5-fold mean MAPE per horizon for Ridge (mode-B with 116 features), Chronos zero-shot, and Chronos fine-tuned.
 
 \begin{table}[t]
-\caption{Fold 0 — Fine-tuned Chronos vs zero-shot vs Ridge}
-\label{tab:finetune_fold0}
+\caption{Fine-tuned Chronos vs zero-shot vs Ridge (5-fold mean MAPE \%)}
+\label{tab:finetune_summary}
 \centering
 \small
 \begin{tabular}{lccc}
 \toprule
-Model & MAPE\,$h{=}1$ & MAPE\,$h{=}5$ & MAPE\,$h{=}20$ \\
+Model & $h{=}1$ & $h{=}5$ & $h{=}20$ \\
 \midrule
-Chronos zero-shot       & 0.66 & 0.72 & 0.76 \\
-\textbf{Chronos fine-tuned} & \textbf{0.42} & \textbf{0.45} & \textbf{0.49} \\
+Ridge (116 feat., mode-B) & \textbf{0.63} & \textbf{1.67} & 4.65 \\
+Chronos zero-shot          & 3.12          & 3.31          & 3.93 \\
+\textbf{Chronos fine-tuned} & \textbf{2.42} & \textbf{2.59} & \textbf{3.21} \\
 \midrule
-$\Delta$ vs zero-shot   & $-36\%$ & $-37\%$ & $-36\%$ \\
+$\Delta$ FT vs zero-shot   & $-22\%$       & $-22\%$       & $-18\%$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Across all three horizons fine-tuning reduces fold-0 MAPE by $\sim$36\% relative to zero-shot --- a clear and consistent improvement that confirms the value of even a few hundred gradient steps on $\sim$1{,}000 in-domain training observations. We release a Colab T4 notebook (\texttt{notebooks/finetune\_chronos\_colab.ipynb}) that runs the full 5-fold benchmark in $\sim$5--8 minutes; reporting the regime-shift fold (2024 SJC rally) is the immediate next step. The fold-0 result is presented as preliminary evidence rather than a head-line claim.
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig8_finetune_summary.png}
+\caption{Mean MAPE across 5 walk-forward folds. Fine-tuning reduces Chronos error by 18--22\% across all horizons and \emph{overtakes} Ridge at $h=20$ ($3.21\%$ vs $4.65\%$).}
+\label{fig:ft_summary}
+\end{figure}
+
+Three findings stand out:
+
+\textbf{(i) Fine-tuning consistently helps.} Across all three horizons fine-tuning reduces 5-fold mean MAPE by $18$--$22\%$ relative to zero-shot, despite using only $\sim$$1{,}000$ in-domain training observations per fold and at most $5\times85 \approx 425$ gradient steps.
+
+\textbf{(ii) Fine-tuned Chronos overtakes Ridge at $h{=}20$.} While Ridge dominates short horizons by a wide margin (the engineered 116-feature input pays off most when the target is one or five days out), the fine-tuned foundation model wins at $h{=}20$ ($3.21\%$ vs $4.65\%$ MAPE, a $-31\%$ relative gain over Ridge). The same pattern is visible in fold~1 at $h{=}20$, where the fine-tuned model achieves $0.23\%$ MAPE versus Ridge's $2.47\%$. Foundation models capture the autoregressive structure better when the prediction window is long enough that engineered short-lag features stop carrying useful signal.
+
+\textbf{(iii) Fine-tuning shines under regime shift.} Fig.~\ref{fig:ft_per_fold} shows per-fold MAPE at $h{=}1$. Fold~3, the 2024 SJC rally, is the most stressful: zero-shot Chronos collapses to $8.35\%$ MAPE (and $10.75\%$ at $h{=}20$), but fine-tuning recovers $-38\%$ relative ($5.16\%$ at $h{=}1$). Fold~4 (post-rally cool-off, where new rally-era dynamics dominate the train slice) is the hardest for both: fine-tuning brings only marginal gains because the train slice itself contains a regime change. Compared with the conformal-prediction story in Sec.~4.6, the picture is consistent: domain-specific fine-tuning improves the point forecast of a foundation model, while ACI conformal prediction provides interval validity. They address different failure modes and should be combined in production.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig9_finetune_per_fold.png}
+\caption{Per-fold MAPE at $h{=}1$ — Chronos zero-shot vs fine-tuned. The shaded band marks fold~3 (the 2024 SJC rally regime shift), where fine-tuning yields the largest relative improvement ($-38\%$).}
+\label{fig:ft_per_fold}
+\end{figure}
+
+\textbf{Caveat.} Ridge at $h{=}1$ ($0.63\%$) is still the overall MAPE winner; fine-tuning does not change that ranking. The contribution of this section is to (a) quantify the value of in-domain fine-tuning of a small foundation model and (b) identify the $h{=}20$ regime where fine-tuned foundation already beats engineered-feature linear models, suggesting that combining the two (foundation model on long horizons, ridge on short horizons) is a promising future direction.
 
 \section{Productisation}
 
@@ -383,7 +408,7 @@ The whole stack is reproducible from a fresh clone in $<10$ minutes on free-tier
 
 We presented the first systematic benchmark of $27$ time-series forecasting models on Vietnamese SJC gold prices, including modern foundation models, regime-aware ensembles, and a feature-family ablation. Key findings: (i) regularised linear regression on $116$ engineered features achieves the best MAPE across all three horizons; (ii) Chronos-Bolt zero-shot is competitive with classical baselines without any training; (iii) technical indicators contribute the largest single-family gain at short horizons, while sentiment, in our current evaluation window, is a no-op---a finding we report faithfully and view as a call for historical news-archive work; (iv) ACI conformal prediction handles regime shifts where vanilla split conformal fails, lifting empirical coverage by $+10$\,pp on linear base learners. All code, data, leaderboards, ablation tables, conformal results, dashboard, API, Telegram bot, retraining pipeline, and Docker images are open-sourced under MIT licence.
 
-\textbf{Future work.} Immediate next steps include: (a) extending the Chronos-Bolt fine-tune from fold~0 to all 5 folds on Colab T4 (preliminary fold-0 evidence already shows $-36\%$ relative MAPE; cf. Sec.~\ref{sec:finetune}); (b) historical news-archive scraping (Wayback Machine 2018--2024) to unlock real sentiment signal in the evaluation window; (c) multi-asset joint forecasting via Temporal Fusion Transformer on GLD + SJC + USD/VND; (d) Markov-switching models replacing the threshold regime detector; and (e) Diebold--Mariano pairwise tests using saved per-fold predictions.
+\textbf{Future work.} Immediate next steps include: (a) a hybrid forecaster that routes short horizons to Ridge and long horizons ($h\geq 20$) to fine-tuned Chronos, motivated by the cross-over result in Sec.~\ref{sec:finetune}; (b) historical news-archive scraping (Wayback Machine 2018--2024) to unlock real sentiment signal in the evaluation window; (c) multi-asset joint forecasting via Temporal Fusion Transformer on GLD + SJC + USD/VND; (d) Markov-switching models replacing the threshold regime detector; and (e) Diebold--Mariano pairwise tests using saved per-fold predictions.
 
 \section*{Acknowledgments}
 This project is part of TDTU's NCKH Sinh Viên programme 2025--2026. The architecture, code review, and statistical analysis were co-developed with Claude Opus 4.7 (Anthropic). We thank the open-source community: Nixtla (StatsForecast / NeuralForecast / MLForecast), Amazon (Chronos), Google (TimesFM), IBM (TTM), Salesforce (Moirai), HuggingFace (mDeBERTa), and the maintainers of \texttt{yfinance}, \texttt{vnstock}, and FRED.

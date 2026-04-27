@@ -206,7 +206,22 @@ git reset --hard milestone-N
 - main.tex: new Section 4.7 + updated Future Work
 - .gitignore: models/chronos_finetuned/ (183MB per fold)
 - pytest 47/47 PASS, tex check clean
-- Sắp commit + tag `milestone-12-finetune-chronos` + push
+- Commit `26b53f6` + tag `milestone-12-finetune-chronos` pushed
+
+### 12:00 — P8.7 Full 5-fold Colab benchmark integrated (M13)
+- User reported `DONE COLAB` then `DONE UNZIP`. Output of Cell 5 pasted
+  showed real 5-fold benchmark from Colab T4 (~8 min wall-clock).
+- Persisted real numbers to `reports/leaderboard/chronos_finetuned_long.csv`
+  (45 records) and `chronos_finetuned_summary.csv` (5-fold mean+std)
+- Key findings:
+  * FT vs ZS: -22% h=1, -22% h=5, -18% h=20 (5-fold mean)
+  * **FT 3.21% < Ridge 4.65% at h=20** (foundation beats engineered linear)
+  * Fold 3 (2024 rally): ZS h=1=8.35% → FT 5.16% = -38% rel
+- Generated figures fig8 + fig9 @ 300 DPI
+- Rewrote main.tex Section 4.7 (replaced fold-0 prelim table) + 3 findings
+- Future Work updated: hybrid Ridge + FT-Chronos forecaster
+- Validated: pytest 47/47, tex 22 cites + 9 figs + envs balanced
+- Sắp commit + tag `milestone-13-finetune-fullfold` + push
 
 
 
