@@ -142,5 +142,86 @@ git reset --hard milestone-N
 - Sắp commit + tag `milestone-5-delivery` + push
 - Project COMPLETE — sẵn sàng merge vào main
 
+## 2026-04-27 (Session 2 — Phase 7 Option 5: IEEE submission package)
+
+### 09:50 — P7 kickoff
+- Branch: `claude/phase-7-execution` (from `claude/phase-6-execution`)
+- Tag checkpoint: `pre-phase-7`
+- Verified state: 47/47 tests PASS, all M1–M10 tags intact
+
+### 09:55 — P7.1 Feature-family ablation (NEW)
+- `scripts/run_ablation_features.py` — 6 nested subsets × 2 models × 3 horizons × 5 folds = 180 records
+- Output: `reports/ablation/{ablation_long,ablation_summary}.csv`
+- Findings: technical = biggest h=1 contributor (-34% rel.); sentiment Δ=0% confirms P2 limitation faithfully
+- ElasticNet L1 robust at h=20; Ridge L2 degrades with feature richness
+
+### 10:05 — P7.2 Publication figures
+- `scripts/generate_paper_figures.py` — 7 figures @ 300 DPI to `reports/paper/ieee_en/figures/`
+
+### 10:15 — P7.3 main.tex expanded
+- 22 citations resolved, 7 figures inserted, 4 tables, 4 new sections
+- Word count ~4233; estimated 9-11 pages in IEEE 2-column conference format
+
+### 10:25 — P7.4 bib.bib + 5 new entries
+- ekambaram2024ttm, rasul2024laglama, angelopoulos2024conformalpid, nguyen2020phobert, he2023mdeberta
+- 0 missing, 0 unused (verified via `scripts/check_tex.py`)
+
+### 10:30 — P7.5 Submission packet templates
+- cover_letter.md (RIVF/SoICT/KSE/ICONIP-friendly)
+- reviewer_response_template.md (per-reviewer rebuttal skeleton)
+- submission_checklist.md (6-section pre-submit gate)
+
+### 10:35 — P7.6 Validation + commit
+- `pytest tests/` → 47/47 PASS in 1.58s ✅
+- `scripts/check_tex.py` → 22/22 citations OK, 7/7 figures OK, envs balanced
+- Commit `b1d327a` + tag `milestone-11-ieee-package` pushed
+
+## 2026-04-27 (Session 2 — Phase 8 Option 3: Fine-tune Chronos-Bolt)
+
+### 10:55 — P8 kickoff
+- Branch: `claude/phase-8-execution` (from `claude/phase-7-execution`)
+- Tag checkpoint: `pre-phase-8`
+- Verified chronos-forecasting 2.2.2 installed, ChronosBoltModelForForecasting
+  has built-in pinball loss (`forward(context, target) -> ChronosBoltOutput.loss`)
+
+### 11:00 — P8.1 finetune_chronos.py
+- Sliding-window dataset (ctx=256, pred=64), AdamW (lr=1e-5)
+- Per-fold HF model.save_pretrained checkpoint to models/chronos_finetuned/fold_{k}/
+
+### 11:10 — P8.2 FineTunedChronosBoltForecaster wrapper added to foundation.py
+
+### 11:12 — P8.3 CPU smoke test (fold 0, 30 steps, bs=4): ✅ loss 55→15 in 11s
+### 11:13 — P8 wrapper sanity: predictions in [67.43, 67.63] vs actual [67.0, 67.4]
+
+### 11:15 — P8.4 CPU full fine-tune fold 0 (3 epochs, bs=8, 255 steps, 94s)
+- Loss converged 50 → 17 over 3 epochs
+
+### 11:16 — P8.5 Benchmark fold 0 (Ridge / ZS / FT × h=1,5,20):
+- ZS h=1=0.66%, h=5=0.72%, h=20=0.76%
+- FT h=1=0.42%, h=5=0.45%, h=20=0.49% — consistent -36% rel improvement
+- Saved reports/leaderboard/chronos_finetuned_{long,summary}.csv
+
+### 11:20 — P8.6 Colab notebook + paper update + gitignore
+- notebooks/finetune_chronos_colab.ipynb (7 cells, T4-ready, full 5-fold)
+- main.tex: new Section 4.7 + updated Future Work
+- .gitignore: models/chronos_finetuned/ (183MB per fold)
+- pytest 47/47 PASS, tex check clean
+- Commit `26b53f6` + tag `milestone-12-finetune-chronos` pushed
+
+### 12:00 — P8.7 Full 5-fold Colab benchmark integrated (M13)
+- User reported `DONE COLAB` then `DONE UNZIP`. Output of Cell 5 pasted
+  showed real 5-fold benchmark from Colab T4 (~8 min wall-clock).
+- Persisted real numbers to `reports/leaderboard/chronos_finetuned_long.csv`
+  (45 records) and `chronos_finetuned_summary.csv` (5-fold mean+std)
+- Key findings:
+  * FT vs ZS: -22% h=1, -22% h=5, -18% h=20 (5-fold mean)
+  * **FT 3.21% < Ridge 4.65% at h=20** (foundation beats engineered linear)
+  * Fold 3 (2024 rally): ZS h=1=8.35% → FT 5.16% = -38% rel
+- Generated figures fig8 + fig9 @ 300 DPI
+- Rewrote main.tex Section 4.7 (replaced fold-0 prelim table) + 3 findings
+- Future Work updated: hybrid Ridge + FT-Chronos forecaster
+- Validated: pytest 47/47, tex 22 cites + 9 figs + envs balanced
+- Sắp commit + tag `milestone-13-finetune-fullfold` + push
+
 
 

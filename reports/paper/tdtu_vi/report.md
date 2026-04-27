@@ -237,8 +237,9 @@ Raw data (11 nguồn) → Merge + ffill → Features V2 (108 cols)
 
 **Insight:** Lag features (giá quá khứ) chiếm 80% importance. Macro (USD, Treasury, GLD) đóng góp **nhỏ nhưng nhất quán** — quan trọng cho regime forecast.
 
-### 5.4 Conformal Prediction Intervals (ElasticNet h=1, fold cuối = 2024 gold rally)
+### 5.4 Conformal Prediction Intervals (3 ML × 5 folds × 3 horizons = 45 evidence points, Phase 2 expanded)
 
+#### 5.4.1 Single-fold demo (fold cuối = 2024 gold rally, ElasticNet h=1)
 | Method | Target coverage | Actual coverage | Avg width |
 |---|---|---|---|
 | Split conformal α=0.05 | 95% | **83.3%** | 3.24 |
@@ -246,7 +247,60 @@ Raw data (11 nguồn) → Merge + ffill → Features V2 (108 cols)
 | Split conformal α=0.20 | 80% | 75.6% | 2.20 |
 | **ACI** α=0.10 | 90% | **83.3%** | 3.62 |
 
-**Insight:** Trong giai đoạn volatile (2024 rally), split conformal **under-cover** ~7-12% so với target (vi phạm exchangeability assumption). **ACI** (Adaptive Conformal Inference) tự động adjust α online → giữ coverage ổn định hơn.
+#### 5.4.2 Full coverage report (Phase 2 mới, target 90% — alpha=0.10)
+Bench ACI vs split conformal trên Ridge / ElasticNet / LightGBM × 5 folds × 3 horizons:
+
+| Horizon | Method | Coverage avg | Width avg |
+|---|---|---|---|
+| h=1 | Split conformal | 75-79% | 1.4-6.8 |
+| h=1 | **ACI** ⭐ | **86%** Ridge/EN | 1.7-1.9 |
+| h=5 | Split | 74-81% | 2.5-8 |
+| h=5 | **ACI** ⭐ | **85%** Ridge/EN | 3.8-3.9 |
+| h=20 | Split | 65-75% | 6.6-11.7 |
+| h=20 | ACI | 72-76% | 7-9 |
+
+**KEY FINDING (Phase 2)**:
+- Trong volatile period (fold 3-4 = 2024 rally), split conformal coverage **drops to 5-22%** (vi phạm guarantee 90%).
+- **ACI maintains 60-90% coverage** trong cùng period.
+- **ACI thắng split conformal ~10 percentage points** ở h=1, h=5.
+
+→ Empirical evidence mạnh cho claim: "**ACI handles regime shifts better**" — chuẩn bị cho IEEE conference paper.
+
+### 5.5 Regime-aware ensemble (Phase 2-3 contribution)
+Phase 2: Build `VolatilityRegimeDetector` — rolling 20-day std + threshold q=0.7 quantile train.
+- Stable ensemble: Ridge (0.45) + ElasticNet (0.45) + SeasonalNaive (0.10)
+- Volatile ensemble: RollingNaive (0.50) + ElasticNet (0.30) + LightGBM (0.20)
+
+Phase 3 nâng cấp: **Rolling re-detection per val row** (no leakage).
+- Fold 0-2 (2022-2023 stable): 0/90 rows volatile detected ✅
+- **Fold 3 (2023-Q4 → 2024-Q1, rally start): 31/90 rows volatile detected** ⭐
+- **Fold 4 (2024-Q1 → Q3, rally peak): 87/90 rows volatile detected** ⭐
+
+→ Detector chính xác bắt regime shift 2024 rally (Phase 2 limitation đã được FIX trong Phase 3).
+
+### 5.6 Sentiment pipeline (Phase 2 demo)
+End-to-end pipeline: news scrape (yfinance + Google News EN/VN) → mDeBERTa zero-shot 3-class → daily aggregate → exog feature.
+
+- 218 headlines fetched (2025-10 → 2026-04, 6 tháng)
+- 110 negative / 100 positive / 8 neutral, mean signed_score = -0.071 (slightly bearish)
+
+⚠️ **Limitation**: news data 2025-10+ KHÔNG overlap với CV folds 2022-2024 → MAPE Δ ≈ 0%. Pipeline verified working; cần historical news (Web Archive scraping) để có impact thực sự — defer cho future work.
+
+### 5.7 So sánh mode-A vs mode-B
+
+- **Mode-A** (single fit train, n_val-step forecast): áp dụng cho classical + foundation. Realistic cho production deployment.
+- **Mode-B** (rolling, biết y[t-1]): áp dụng cho ML/DL với engineered lag features. Bound dưới = `RollingNaive` (0.33% MAPE h=1).
+
+→ ML linear (Ridge, ElasticNet) tận dụng mode-B + 108 features → bứt phá 5x so với mode-A baselines.
+
+### 5.8 Production deliverables (Phase 3-4)
+- ✅ Streamlit dashboard (`app/streamlit_app.py`) — 4 tabs interactive
+- ✅ FastAPI server (`app/api/main.py`) — 5 endpoints OpenAPI
+- ✅ Telegram bot (`app/telegram_bot.py`) — 6 commands
+- ✅ Docker multi-stage (training + serving images)
+- ✅ docker-compose: Streamlit + FastAPI + healthcheck
+- ✅ GitHub Actions CI/CD: pytest + ruff + coverage
+- ✅ Auto-retrain weekly: `scripts/retrain_weekly.py` + cron/Task Scheduler entries
 
 ### 5.5 So sánh mode-A vs mode-B
 

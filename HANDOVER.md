@@ -105,15 +105,18 @@ NCKH/
 ```
 
 ### 2.2 Git state
-- **Branch `main`**: `13b9ebd` (HEAD) — full project pushed
-- **Branch `claude/auto-execution`**: `13b9ebd` (sync với main, pushed)
+- **Branch `main`**: `fa59536` — Phase 1 final
+- **Branch `claude/auto-execution`**: `fa59536` (sync với main)
+- **Branch `claude/phase-2-execution`** ⭐ NEW: HEAD — Phase 2 work
 - **Tags pushed remote**:
   - `pre-claude-v0` — rollback point (chỉ legacy code)
   - `milestone-1-foundation` — refactor + walk-forward CV
   - `milestone-2-baselines` — features V2 + 9 classical
   - `milestone-3-models` — +7 ML +7 DL = 23 models
   - `milestone-4-frontier` — +1 foundation + ensemble + conformal + XAI
-  - `milestone-5-delivery` — Streamlit + FastAPI + papers (FINAL)
+  - `milestone-5-delivery` — Streamlit + FastAPI + papers
+  - `pre-phase-2` — rollback cho Phase 2
+  - `milestone-6-phase2-boost` — sentiment + regime + conformal full (PARTIAL P2 Option 1)
 
 ### 2.3 Final benchmark results
 24 models × 5 walk-forward folds × 3 horizons = **360 records**
@@ -168,10 +171,18 @@ NCKH/
 
 ---
 
-## 4. KNOWN LIMITATIONS (Phase 2 candidates)
+## 4. KNOWN LIMITATIONS (Phase 2 partial done; Phase 3 candidates)
 
-### 4.1 Soft / Optional
-1. **Sentiment vẫn là STUB zeros** — pipeline PhoBERT/mDeBERTa zero-shot ready trong `src/features/sentiment.py`, chưa scrape news
+### 4.0 Phase 2 added (2026-04-27, branch claude/phase-2-execution, tag milestone-6-phase2-boost)
+- ✅ Real news scraper + mDeBERTa zero-shot scoring pipeline (218 headlines verified)
+- ✅ Regime-aware ensemble (with limitation: train-end detection only)
+- ✅ Conformal full coverage report — ACI 86% h=1 vs split 76%
+- ⚠️ Sentiment integration: pipeline working but news data 2025-10+ KHÔNG overlap CV folds 2022-2024
+   → MAPE Δ = 0%; cần historical news scraping cho impact thực sự (Phase 3)
+
+### 4.1 Soft / Optional (Phase 3 candidates)
+1. **Historical news data**: scrape Web Archive cho CafeF/VnExpress 2018-2024
+   → unlock real sentiment impact trên benchmark
 2. **CPI VN missing** — FRED code `CPALTT01VNQ657N` đã 404; cần lấy thủ công từ GSO (gso.gov.vn)
 3. **Optuna tuning chưa toàn diện** — Ridge/ElasticNet đã thắng với defaults; trees có thể bứt phá với tuning
 4. **TFT + iTransformer chưa benchmark đầy đủ** — code sẵn (`src/models/dl_neuralforecast.py`), cần Colab T4
