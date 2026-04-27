@@ -43,10 +43,11 @@ jobs:
         run: |
           git config user.name "news-bot"
           git config user.email "news-bot@users.noreply.github.com"
-          if git diff --quiet -- data/external/news_realtime.parquet; then
-            echo "No news changes — skipping commit"
+          git add data/external/news_realtime.parquet \
+                  data/external/gdelt_tone_timeline.parquet 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No changes — skipping commit"
           else
-            git add data/external/news_realtime.parquet
             git commit -m "chore(news): auto-refresh $(date -u +%Y-%m-%dT%H:%MZ)"
             git push
           fi
