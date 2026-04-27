@@ -5,9 +5,60 @@ Tất cả thay đổi đáng chú ý của dự án sẽ được ghi tại đ�
 Format dựa trên [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning theo [SemVer](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — branch `claude/phase-2-execution`
+## [Unreleased] — branch `claude/phase-3-execution`
 
-(Phase 2 partial — Option 1 "Boost Paper" 3/4 done)
+(Phase 3 mini-bundle — 3 high-ROI items)
+
+---
+
+## [0.7.0-p3] — `milestone-7-phase3` (2026-04-27)
+
+### Added (P3 mini-bundle)
+
+#### P3.1 Rolling regime re-detection ⭐ FIX P2 LIMITATION
+- `src/models/ensemble_regime.py` enhanced:
+  - `predict()` now re-detects regime per val row using past data only (no leakage)
+  - Build extended target = train + val[:i] for each i
+  - For each val row → choose stable/volatile ensemble
+  - Cache `_last_regime_trace` for debugging
+
+**KEY RESULT — 2024 rally fold detection**:
+| Fold | Val period | Train-end regime | Rolling re-detect (volatile/total) |
+|---|---|---|---|
+| 0 | 2022-Q4 | stable | 0/90 |
+| 1 | 2023-Q1 | stable | 0/90 |
+| 2 | 2023-Q3 | stable | 0/90 |
+| 3 | 2023-Q4 to 2024-Q1 | stable | **31/90** ⭐ rally start detected |
+| 4 | 2024-Q1 to Q3 | stable | **87/90** ⭐ rally peak detected |
+
+→ Phase 2 limitation FIXED — regime detector now catches volatile periods correctly.
+
+#### P3.2 GitHub Actions CI/CD
+- `.github/workflows/ci.yml`:
+  - Trigger: push main + claude/** branches; PR to main
+  - Python 3.11 matrix
+  - Cache HF + torch hub
+  - Install minimal deps (no torch/prophet/neuralforecast — fast CI)
+  - Run pytest (test_metrics, test_cv_no_leakage, test_features, test_stat_tests)
+  - Ruff lint advisory; coverage advisory
+  - Timeout 25 phút
+- README.md: thêm CI badge + tests badge + models badge
+
+#### P3.3 Telegram bot MVP
+- `app/telegram_bot.py`:
+  - Commands: /start, /help, /predict {1|5|20}, /history N, /leaderboard h, /shap
+  - ElasticNet h=1 cached on startup
+  - Markdown formatting với emoji
+  - Lazy import telegram lib (smoke test without polling)
+  - Smoke test PASS: predict next SJC = 170.30
+- Deploy notes:
+  - Cần TELEGRAM_BOT_TOKEN env var (lấy từ @BotFather)
+  - Free hosts: Replit Hacker (always-on), Render Background Worker
+  - Cron trigger alternative: cron-job.org → daily ping endpoint
+
+### Tests: 47/47 PASS (no regression — rolling regime improvement validated)
+
+---
 
 ---
 

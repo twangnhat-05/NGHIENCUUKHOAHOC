@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Cache HF + torch hub (skip heavy reinstall)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/huggingface
+            ~/.cache/torch
+          key: ${{ runner.os }}-modelcache-v1
+
+      - name: Install minimal test deps (no DL/foundation)
+        run: |
+          python -m pip install --upgrade pip
+          # Minimal subset: skip torch, prophet, neuralforecast, transformers (CI fast)
+          pip install pandas==2.2.3 numpy==1.26.4 scipy==1.14.1 pyarrow==17.0.0 \
+                      scikit-learn==1.5.2 xgboost==2.1.2 lightgbm==4.5.0 \
+                      pyyaml==6.0.2 statsmodels==0.14.4 \
+                      pytest==8.3.3 pytest-cov==5.0.0 ruff==0.7.1
+
+      - name: Lint with ruff (advisory)
+        run: |
+          ruff check src/ tests/ --output-format=github || echo "Lint warnings (non-blocking)"
+        continue-on-error: true
+
+      - name: Run pytest
+        env:
+          PYTHONPATH: .
+          PYTHONIOENCODING: utf-8
+        run: |
+          # Skip tests that need heavy DL deps
+          pytest tests/test_metrics.py tests/test_cv_no_leakage.py tests/test_features.py tests/test_stat_tests.py -v --tb=short
+
+      - name: Coverage report (advisory)
+        env:
+          PYTHONPATH: .
+          PYTHONIOENCODING: utf-8
+        run: |
+          pytest tests/test_metrics.py tests/test_cv_no_leakage.py --cov=src/evaluation --cov=src/training --cov-report=term
+        continue-on-error: true

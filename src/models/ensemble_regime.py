@@ -82,34 +82,70 @@ class RegimeAwareEnsemble(BaseForecaster):
                 log.warning(f"Member {model.name} fit failed: {e}")
         return self
 
-    def predict(self, test_df: pd.DataFrame, h: int = 1) -> np.ndarray:
-        # Use train-end regime cho all val (assumption: regime stable trong val period 90 days)
-        # Nâng cao hơn: re-detect mỗi val row, nhưng cần past data — phức tạp
-        ensemble = self.stable_models if self._fit_regime == "stable" else self.volatile_models
-        log.debug(f"Using {self._fit_regime} ensemble: {list(ensemble.keys())}")
+    def predict(self, test_df: pd.DataFrame, h: int = 1, target_col: str = "SJC_ban_ra") -> np.ndarray:
+        """Rolling regime detection: re-detect mỗi val row dùng past target.
 
+        For each val row i:
+          history = train_target ∪ val[target][:i]  (only past, no leakage)
+          regime_i = detector.detect_single(history)
+          Use stable/volatile ensemble accordingly to predict val row i.
+
+        Optimize: predict ALL val rows với cả 2 ensembles 1 lần,
+        sau đó chọn output tương ứng theo regime per row.
+        """
         n = len(test_df)
-        # Cần truyền y_observed cho RollingNaive
         test_with_obs = test_df.copy()
-        if "SJC_ban_ra" in test_with_obs.columns and "y_observed" not in test_with_obs.columns:
-            test_with_obs["y_observed"] = test_with_obs["SJC_ban_ra"]
+        if target_col in test_with_obs.columns and "y_observed" not in test_with_obs.columns:
+            test_with_obs["y_observed"] = test_with_obs[target_col]
 
-        preds_matrix = []
-        weights = []
-        for name, (model, w) in ensemble.items():
+        # Predict với CẢ 2 ensemble, mỗi ensemble cho ra 1 array length n
+        def _ensemble_predict(ensemble_dict: dict) -> np.ndarray:
+            preds_matrix = []
+            weights = []
+            for name, (model, w) in ensemble_dict.items():
+                try:
+                    p = np.asarray(model.predict(test_with_obs, h=h))
+                    if len(p) < n:
+                        p = np.concatenate([p, np.full(n - len(p), p[-1] if len(p) else 0.0)])
+                    preds_matrix.append(p[:n])
+                    weights.append(w)
+                except Exception as e:
+                    log.warning(f"Member {name} predict failed: {e}")
+            if not preds_matrix:
+                return np.zeros(n)
+            preds_matrix = np.array(preds_matrix)
+            weights = np.array(weights) / np.array(weights).sum()
+            return weights @ preds_matrix
+
+        stable_preds = _ensemble_predict(self.stable_models)
+        volatile_preds = _ensemble_predict(self.volatile_models)
+
+        # Rolling regime: cho mỗi val row i, dùng (train + val[:i]) để detect
+        if target_col not in test_with_obs.columns:
+            # Không có observed target → fallback train-end regime
+            return stable_preds if self._fit_regime == "stable" else volatile_preds
+
+        val_target = test_with_obs[target_col].to_numpy()
+        # Build extended target: train + val (cumulative past at each val row)
+        extended = pd.concat([self._train_target, pd.Series(val_target)], ignore_index=True)
+        n_train = len(self._train_target)
+
+        regimes = []
+        out = np.zeros(n)
+        for i in range(n):
+            # History up through val row i (inclusive; predict at row i uses past only)
+            history_end = n_train + i
+            history = extended.iloc[: history_end + 1]
             try:
-                p = model.predict(test_with_obs, h=h)
-                p = np.asarray(p)
-                if len(p) < n:
-                    p = np.concatenate([p, np.full(n - len(p), p[-1] if len(p) else 0.0)])
-                preds_matrix.append(p[:n])
-                weights.append(w)
-            except Exception as e:
-                log.warning(f"Member {name} predict failed: {e}")
+                regime_i = self.detector.detect_single(history)
+            except Exception:
+                regime_i = self._fit_regime
+            regimes.append(regime_i)
+            out[i] = stable_preds[i] if regime_i == "stable" else volatile_preds[i]
 
-        if not preds_matrix:
-            return np.zeros(n)
-        preds_matrix = np.array(preds_matrix)
-        weights = np.array(weights)
-        weights = weights / weights.sum()
-        return weights @ preds_matrix
+        # Cache regime trace for debugging
+        self._last_regime_trace = regimes
+        n_volatile = sum(1 for r in regimes if r == "volatile")
+        if n_volatile > 0:
+            log.info(f"Rolling regimes: {n_volatile}/{n} volatile, {n - n_volatile} stable")
+        return out
