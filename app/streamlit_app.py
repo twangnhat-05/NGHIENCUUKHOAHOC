@@ -252,26 +252,53 @@ with tab_predict:
         "Click \"Generate Forecast\" để retrain ElasticNet trên full data và dự báo."
     )
 
+    apply_tone = st.toggle(
+        "📰 Apply live news tone adjustment",
+        value=False,
+        help="Shift the base forecast by a small calibrated amount based on "
+             "the average GDELT tone of gold-relevant news in the last 24h.",
+    )
+
     if st.button("🚀 Generate Forecast", type="primary"):
         with st.spinner("Training ElasticNet và generate forecast..."):
             try:
                 from src.models.ml import ElasticNetForecaster
+                from src.forecast.live_tone import (
+                    compute_live_tone, apply_tone_adjustment,
+                )
                 model = ElasticNetForecaster(horizon=horizon)
-                # Use last 200 rows as "test", rest as train
                 n = len(features_df)
                 cut = n - 100
                 train = features_df.iloc[:cut].copy()
                 test = features_df.iloc[cut:].copy()
                 model.fit(train, target_col="SJC_ban_ra")
-                preds = model.predict(test)
+                base_preds = model.predict(test)
                 test_dates = pd.to_datetime(test["Date"]).reset_index(drop=True)
                 actual = test["SJC_ban_ra"].reset_index(drop=True)
+
+                # Live-tone adjustment (only the LATEST point — context for
+                # today's forecast, not retroactive recalibration).
+                snap = compute_live_tone()
+                adj_preds = base_preds.copy()
+                if apply_tone and snap.tone_mean is not None:
+                    adj_last, _delta = apply_tone_adjustment(
+                        base_preds[-1], snap.tone_mean,
+                    )
+                    adj_preds[-1] = adj_last
 
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(x=test_dates, y=actual, name="Actual",
                                           line=dict(color="black", width=2)))
-                fig.add_trace(go.Scatter(x=test_dates, y=preds, name="ElasticNet pred",
+                fig.add_trace(go.Scatter(x=test_dates, y=base_preds,
+                                          name="ElasticNet base",
                                           line=dict(color="#2ca02c", width=2)))
+                if apply_tone and snap.tone_mean is not None:
+                    fig.add_trace(go.Scatter(
+                        x=test_dates.tail(1), y=[adj_preds[-1]],
+                        mode="markers", marker=dict(size=12, color="#1565C0",
+                                                    symbol="star"),
+                        name=f"News-adjusted (tone={snap.tone_mean:+.1f})",
+                    ))
                 fig.update_layout(
                     title=f"ElasticNet Forecast h={horizon} (last 100 days)",
                     xaxis_title="Date", yaxis_title="SJC bán ra (triệu VND)",
@@ -279,9 +306,42 @@ with tab_predict:
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
-                # Compute MAPE
-                mape = np.mean(np.abs((actual.values - preds) / actual.values)) * 100
-                st.success(f"✅ MAPE trên test = **{mape:.3f}%**")
+                # MAPE on the test slice (computed on the BASE forecast — the
+                # adjustment only touches the very last point).
+                mape = np.mean(np.abs((actual.values - base_preds) / actual.values)) * 100
+                col_a, col_b, col_c = st.columns(3)
+                col_a.metric("MAPE (test)", f"{mape:.3f}%")
+                col_b.metric("Base forecast (latest)",
+                             f"{base_preds[-1]:.2f}M VND")
+                if apply_tone and snap.tone_mean is not None:
+                    delta = (adj_preds[-1] - base_preds[-1]) / base_preds[-1] * 100
+                    col_c.metric(
+                        "News-adjusted",
+                        f"{adj_preds[-1]:.2f}M VND",
+                        f"{delta:+.3f}%",
+                    )
+                else:
+                    col_c.metric("News-adjusted", "—",
+                                 help="Toggle the option above to enable")
+
+                # Tone explanation panel
+                with st.expander("ℹ️ Live tone snapshot"):
+                    if snap.tone_mean is None:
+                        st.warning(f"No usable tone data: {snap.fallback_reason}")
+                    else:
+                        st.write(
+                            f"- **Mean tone (last {snap.window_hours}h):** "
+                            f"`{snap.tone_mean:+.2f}` (-100 strong negative → +100 strong positive)"
+                        )
+                        st.write(f"- **Articles aggregated:** {snap.n_articles}")
+                        if snap.age_minutes is not None:
+                            st.write(f"- **Latest article:** {snap.age_minutes:.0f} min ago")
+                        st.caption(
+                            "Calibration prior α = 0.001 per tone-point — small by design "
+                            "because the live-news archive does not overlap the historical "
+                            "CV window (see paper §4.5). Delta is informational, not a "
+                            "validated MAPE improvement."
+                        )
             except Exception as e:
                 st.error(f"Forecast failed: {e}")
 

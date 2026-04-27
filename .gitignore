@@ -63,3 +63,6 @@ secrets/
 # ============== OS ==============
 Thumbs.db
 desktop.ini
+
+# Project-local CLI settings
+.claude/
