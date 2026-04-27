@@ -118,11 +118,54 @@ def fetch_gdelt_doc_api(
             "summary": "",
             "url": art.get("url", ""),
             "domain": art.get("domain", ""),
-            "tone": float(art.get("tone", 0.0)) if art.get("tone") is not None else None,
-            "lang": art.get("language", "unknown")[:2].lower(),
+            # ArtList does not return per-article tone — use timeline API below
+            "tone": None,
+            "lang": (art.get("language") or "unknown")[:2].lower(),
         })
     log.info(f"GDELT: {len(rows)} articles (timespan={timespan})")
     return pd.DataFrame(rows, columns=NEWS_SCHEMA)
+
+
+def fetch_gdelt_timeline_tone(
+    query: str = "(gold OR \"gold price\" OR bullion OR \"precious metals\")",
+    timespan: str = "1d",
+) -> pd.DataFrame:
+    """Fetch the GDELT TimelineTone series for a query.
+
+    Returns a DataFrame with `ts` (UTC, 15-min buckets) and `tone` (mean tone
+    -100..+100 across all articles in that bucket). Empty DF on failure.
+    """
+    base = "https://api.gdeltproject.org/api/v2/doc/doc"
+    params = {
+        "query": query,
+        "mode": "TimelineTone",
+        "format": "json",
+        "timespan": timespan,
+    }
+    url = base + "?" + "&".join(f"{k}={quote(str(v), safe='')}" for k, v in params.items())
+    r = _http_get_with_retry(url)
+    if r is None:
+        return pd.DataFrame(columns=["ts", "tone"])
+    try:
+        data = r.json()
+    except Exception:
+        return pd.DataFrame(columns=["ts", "tone"])
+
+    rows = []
+    for series in data.get("timeline", []):
+        for pt in series.get("data", []):
+            ts_raw = pt.get("date", "")
+            try:
+                ts = datetime.strptime(ts_raw, "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+            except ValueError:
+                continue
+            try:
+                tone = float(pt.get("value", 0.0))
+            except (TypeError, ValueError):
+                continue
+            rows.append({"ts": ts.isoformat(), "tone": tone})
+    log.info(f"GDELT TimelineTone: {len(rows)} buckets (timespan={timespan})")
+    return pd.DataFrame(rows, columns=["ts", "tone"])
 
 
 # ============================================================
@@ -239,16 +282,44 @@ def fetch_rss(source_id: str, url: str, lang: str,
 # Aggregator
 # ============================================================
 
+DEFAULT_TONE_CACHE = "data/external/gdelt_tone_timeline.parquet"
+
+
 def fetch_all_realtime(
     cache_path: str = "data/external/news_realtime.parquet",
+    tone_cache_path: str = DEFAULT_TONE_CACHE,
     keep_days: int = 90,
 ) -> pd.DataFrame:
-    """Fetch every source, dedupe, append to cache, prune older than `keep_days`."""
+    """Fetch every source, dedupe, append to cache, prune older than `keep_days`.
+
+    Also refreshes the GDELT TimelineTone cache (small parquet with 15-min
+    bucket tones) so the dashboard can read aggregate tone without making an
+    API call at request time.
+    """
     parts: list[pd.DataFrame] = []
 
     df_gd = fetch_gdelt_doc_api(timespan="1d", max_records=150)
     if not df_gd.empty:
         parts.append(df_gd)
+
+    # Tone timeline (separate from article list — different GDELT mode)
+    df_tone = fetch_gdelt_timeline_tone(timespan="1d")
+    if not df_tone.empty:
+        tone_full = project_root() / tone_cache_path
+        try:
+            if tone_full.exists():
+                old = pd.read_parquet(tone_full)
+                df_tone = pd.concat([old, df_tone], ignore_index=True)
+            df_tone = df_tone.drop_duplicates(subset=["ts"], keep="last")
+            df_tone["ts_dt"] = pd.to_datetime(df_tone["ts"], utc=True, errors="coerce")
+            df_tone = df_tone.dropna(subset=["ts_dt"]).sort_values("ts_dt")
+            cutoff = datetime.now(timezone.utc) - pd.Timedelta(days=keep_days)
+            df_tone = df_tone[df_tone["ts_dt"] >= cutoff]
+            df_tone = df_tone.drop(columns=["ts_dt"])
+            write_parquet(df_tone, tone_full)
+            log.info(f"Saved {tone_full.name}: {len(df_tone)} tone buckets")
+        except Exception as e:
+            log.warning(f"Tone cache update failed: {e}")
 
     df_rd = fetch_reddit_json(limit=30)
     if not df_rd.empty:

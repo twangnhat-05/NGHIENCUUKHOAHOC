@@ -20,6 +20,7 @@ from pathlib import Path
 import pandas as pd
 
 DEFAULT_CACHE = Path("data/external/news_realtime.parquet")
+DEFAULT_TONE_CACHE = Path("data/external/gdelt_tone_timeline.parquet")
 DEFAULT_WINDOW_HOURS = 24
 DEFAULT_ALPHA = 1e-3  # tiny prior; see module docstring
 
@@ -38,52 +39,49 @@ class ToneSnapshot:
 
 
 def compute_live_tone(
-    cache_path: str | Path = DEFAULT_CACHE,
+    cache_path: str | Path = DEFAULT_TONE_CACHE,
     window_hours: int = DEFAULT_WINDOW_HOURS,
     now: datetime | None = None,
 ) -> ToneSnapshot:
-    """Aggregate GDELT tone from the most recent `window_hours` of cached news.
+    """Aggregate GDELT timeline tone over the most recent `window_hours`.
 
-    Returns a ToneSnapshot. If the cache is missing or has no GDELT rows in
-    the window, returns a snapshot with `tone_mean=None` and a fallback reason.
+    Reads the small `gdelt_tone_timeline.parquet` produced by the news cron
+    (each row = a 15-min bucket with mean tone). If the cache is missing or
+    has no buckets in the window, returns `tone_mean=None` with a fallback
+    reason describing why.
     """
     now = now or datetime.now(timezone.utc)
     p = Path(cache_path)
     if not p.exists():
         return ToneSnapshot(None, None, 0, window_hours, None, None,
-                            "news cache not found")
+                            "tone cache not found — run scripts/refresh_news_realtime")
 
     try:
         df = pd.read_parquet(p)
     except Exception as e:
         return ToneSnapshot(None, None, 0, window_hours, None, None,
-                            f"cache read failed: {e}")
+                            f"tone cache read failed: {e}")
 
-    if df.empty or "source" not in df.columns:
+    if df.empty or "tone" not in df.columns:
         return ToneSnapshot(None, None, 0, window_hours, None, None,
-                            "cache empty")
-
-    df = df[df["source"] == "gdelt"].copy()
-    if df.empty:
-        return ToneSnapshot(None, None, 0, window_hours, None, None,
-                            "no GDELT articles in cache")
+                            "tone cache empty")
 
     df["ts"] = pd.to_datetime(df["ts"], utc=True, errors="coerce")
     df = df.dropna(subset=["ts"])
+    df["tone"] = pd.to_numeric(df["tone"], errors="coerce")
+    df = df.dropna(subset=["tone"])
+
     cutoff = pd.Timestamp(now) - timedelta(hours=window_hours)
     recent = df[df["ts"] >= cutoff].copy()
     if recent.empty:
-        latest = df["ts"].max()
-        age = (pd.Timestamp(now) - latest).total_seconds() / 60.0
-        return ToneSnapshot(None, None, 0, window_hours, latest, age,
-                            f"no articles within last {window_hours}h "
-                            f"(latest is {age/60:.1f}h old)")
-
-    recent["tone"] = pd.to_numeric(recent["tone"], errors="coerce")
-    recent = recent.dropna(subset=["tone"])
-    if recent.empty:
-        return ToneSnapshot(None, None, 0, window_hours, None, None,
-                            "GDELT articles in window have no tone field")
+        latest = df["ts"].max() if not df.empty else None
+        age = ((pd.Timestamp(now) - latest).total_seconds() / 60.0) if latest is not None else None
+        reason = (
+            f"no tone data within last {window_hours}h "
+            f"(latest is {age/60:.1f}h old)" if latest is not None
+            else "tone cache contains no usable rows"
+        )
+        return ToneSnapshot(None, None, 0, window_hours, latest, age, reason)
 
     latest = recent["ts"].max()
     age = (pd.Timestamp(now) - latest).total_seconds() / 60.0

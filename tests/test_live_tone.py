@@ -15,8 +15,8 @@ from src.forecast.live_tone import (
 )
 
 
-def _write_cache(tmp_path: Path, rows: list[dict]) -> Path:
-    p = tmp_path / "news_realtime.parquet"
+def _write_tone_cache(tmp_path: Path, rows: list[dict]) -> Path:
+    p = tmp_path / "gdelt_tone_timeline.parquet"
     df = pd.DataFrame(rows)
     df.to_parquet(p, index=False)
     return p
@@ -32,23 +32,12 @@ def test_compute_live_tone_returns_fallback_when_cache_missing(tmp_path):
 def test_compute_live_tone_filters_to_window(tmp_path):
     now = datetime(2026, 4, 27, 10, 0, tzinfo=timezone.utc)
     rows = [
-        # within last 24h
-        {"ts": (now - timedelta(hours=2)).isoformat(),
-         "source": "gdelt", "tone": 5.0, "title": "a", "url": "http://x/1",
-         "date": "2026-04-27", "summary": "", "domain": "", "lang": "en"},
-        {"ts": (now - timedelta(hours=20)).isoformat(),
-         "source": "gdelt", "tone": -3.0, "title": "b", "url": "http://x/2",
-         "date": "2026-04-26", "summary": "", "domain": "", "lang": "en"},
-        # too old, should be excluded
-        {"ts": (now - timedelta(hours=48)).isoformat(),
-         "source": "gdelt", "tone": 100.0, "title": "c", "url": "http://x/3",
-         "date": "2026-04-25", "summary": "", "domain": "", "lang": "en"},
-        # non-gdelt source, ignored
-        {"ts": (now - timedelta(hours=1)).isoformat(),
-         "source": "reddit", "tone": 50.0, "title": "d", "url": "http://x/4",
-         "date": "2026-04-27", "summary": "", "domain": "", "lang": "en"},
+        {"ts": (now - timedelta(hours=2)).isoformat(),  "tone": 5.0},
+        {"ts": (now - timedelta(hours=20)).isoformat(), "tone": -3.0},
+        # too old — excluded by 24h window
+        {"ts": (now - timedelta(hours=48)).isoformat(), "tone": 100.0},
     ]
-    p = _write_cache(tmp_path, rows)
+    p = _write_tone_cache(tmp_path, rows)
     snap = compute_live_tone(cache_path=p, window_hours=24, now=now)
     assert isinstance(snap, ToneSnapshot)
     assert snap.tone_mean == pytest.approx(1.0)  # mean of 5, -3
@@ -59,14 +48,12 @@ def test_compute_live_tone_filters_to_window(tmp_path):
 def test_compute_live_tone_handles_no_recent_articles(tmp_path):
     now = datetime(2026, 4, 27, 10, 0, tzinfo=timezone.utc)
     rows = [
-        {"ts": (now - timedelta(days=5)).isoformat(),
-         "source": "gdelt", "tone": 7.0, "title": "old", "url": "http://x/1",
-         "date": "2026-04-22", "summary": "", "domain": "", "lang": "en"},
+        {"ts": (now - timedelta(days=5)).isoformat(), "tone": 7.0},
     ]
-    p = _write_cache(tmp_path, rows)
+    p = _write_tone_cache(tmp_path, rows)
     snap = compute_live_tone(cache_path=p, window_hours=24, now=now)
     assert snap.tone_mean is None
-    assert "no articles" in snap.fallback_reason.lower()
+    assert "no tone data" in snap.fallback_reason.lower()
 
 
 def test_apply_tone_adjustment_noop_when_tone_none():

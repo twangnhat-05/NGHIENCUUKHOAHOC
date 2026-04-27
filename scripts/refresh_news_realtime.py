@@ -28,19 +28,30 @@ DEFAULT_CACHE = "data/external/news_realtime.parquet"
 DEFAULT_SCORED = "data/external/news_realtime_scored.parquet"
 
 
-def aggregate_daily_tone(df: pd.DataFrame) -> pd.DataFrame:
-    """Aggregate GDELT tone (the only native-sentiment source) per day.
+def aggregate_daily_tone(tone_cache_path: str | None = None) -> pd.DataFrame:
+    """Aggregate the GDELT TimelineTone cache per UTC date.
 
-    Reddit and RSS rows are counted but not scored here — that requires the
-    heavier mDeBERTa pipeline run separately."""
-    if df.empty:
+    Reads `data/external/gdelt_tone_timeline.parquet` (15-min buckets) and
+    computes daily mean/std/count. Returns empty DataFrame if the cache is
+    missing or unreadable.
+    """
+    from src.utils.io import project_root
+    p = project_root() / (tone_cache_path or "data/external/gdelt_tone_timeline.parquet")
+    if not p.exists():
         return pd.DataFrame()
-    g = df[df["source"] == "gdelt"].copy()
-    if g.empty:
+    try:
+        df = pd.read_parquet(p)
+    except Exception:
         return pd.DataFrame()
-    g["tone"] = pd.to_numeric(g["tone"], errors="coerce")
+    if df.empty or "tone" not in df.columns:
+        return pd.DataFrame()
+    df["ts"] = pd.to_datetime(df["ts"], utc=True, errors="coerce")
+    df = df.dropna(subset=["ts"])
+    df["date"] = df["ts"].dt.date.astype(str)
+    df["tone"] = pd.to_numeric(df["tone"], errors="coerce")
+    df = df.dropna(subset=["tone"])
     daily = (
-        g.groupby("date")
+        df.groupby("date")
         .agg(
             tone_mean=("tone", "mean"),
             tone_std=("tone", "std"),
@@ -115,7 +126,7 @@ def main() -> int:
     by_source = df["source"].value_counts().to_dict() if "source" in df else {}
     log.info(f"Sources: {by_source}")
 
-    daily = aggregate_daily_tone(df)
+    daily = aggregate_daily_tone()
     if not daily.empty:
         last7 = daily.tail(7)
         log.info("Last-7-day GDELT tone:")
