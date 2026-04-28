@@ -56,19 +56,53 @@ defensive — re-running benchmarks shows numbers unchanged (Δ < 1e-12 MAPE/DA)
 - README.md badges: tests-47->57, models-25->24.
 - app/telegram_bot.py welcome: 25 mô hình -> 24 mô hình (matches paper).
 
-### Verified
-- 57/57 tests PASS (was 53; +4 new no-leakage integration tests)
-- ML MAPE delta vs prior: < 1e-12 across all models / horizons
-- ML DA delta vs prior: < 1e-13
-- Ablation numbers unchanged (h=1 ElasticNet 0.67%, h=20 ElasticNet 3.06%)
-- Paper Section 4 tables I-V remain valid — no figure re-render needed.
+### Verified — and CORRECTION (peer review caught my over-claim)
 
-### Known follow-ups (audit findings deferred)
-- DL benchmark re-run (~30-60 min on CPU) — defer to scheduled retrain.
+**MAPE / RMSE / MAE — unchanged** (delta < 1e-12 across all models × horizons).
+y_prev does not feed these metrics, so F3 had no effect on them.
+
+**DA / HitRate — DID change for mode-A horizon > 1.** F3 fixed the off-by-one
+on y_prev, which DA / HitRate consume directly. ML wrappers use the mode-B
+path which was already correct (hence ML DA delta still ~0). Mode-A
+classical + foundation DA at h ∈ {5, 20} shifted by **−1.9 to +2.6 pp** vs
+the pre-audit numbers. Examples:
+
+  AutoARIMA   h=20: 54.07 -> 56.41  (+2.34 pp)
+  AutoETS     h=20: 56.33 -> 58.66  (+2.34 pp)
+  AutoTheta   h=20: 53.23 -> 55.84  (+2.61 pp)
+  Chronos-Bolt h=5: 43.02 -> 44.52  (+1.50 pp)
+  Chronos-Bolt h=20: 41.35 -> 42.06 (+0.71 pp)
+  SeasonalNaive h=5: 46.02 -> 48.43 (+2.41 pp)
+
+DA at h=1 unchanged (h=1 path was always correct, sanity-checked).
+
+**Action taken**:
+- `reports/leaderboard/combined_v2_summary.csv` and `combined_v2_long.csv`
+  now hold the post-audit numbers. Pre-audit copies preserved at
+  `combined_v2_pre_audit_{summary,long}.csv` for provenance.
+- All 9 paper figures re-rendered (fig1–fig9 @ 300 DPI). Paper main.tex
+  Tables I-V show DA only for h=1, which is unchanged — so the LaTeX
+  source needs no edits, but anyone reading the leaderboard CSV directly
+  now sees corrected numbers.
+- Friedman test was MAPE-based, so `friedman_test.csv` is unchanged.
+
+**Lesson logged**: ML-only re-run (which I did first) was insufficient to
+validate F3 because mode-A path is exercised by classical + foundation, not
+ML wrappers. Always test the path the fix actually touches.
+
+### Known follow-ups (audit, full F6–F13 list for W4–W5)
+
+- F6 [HIGH]   FastAPI CORS `allow_origins=["*"]` + `allow_credentials=True`
+- F7 [MEDIUM] StackingRegressor `cv=3` -> `TimeSeriesSplit(3)`
+- F8 [MEDIUM] `set_global_seed` `PYTHONHASHSEED` no-op in current process
+- F9 [MEDIUM] SJC scraper `[-1]` row + range validation + label-pick
+- F10 [MEDIUM] silent naive fallback in foundation models swallows real failures
+- F11 [HIGH] `outliers.fit_on=train_fold` config flag is unwired in WFCV
+- F12 [MEDIUM] no shared model registry across 4 entry points
+  (FastAPI / Streamlit / Telegram / email digest each refit independently)
+- F13 [MEDIUM] CI runs only 4/7 test files; ruff is `continue-on-error: true`
+- DL benchmark re-run (~30-60 min on CPU) — pending scheduled retrain.
 - FT-Chronos 5-fold re-run requires user re-running Colab notebook.
-- StackingForecaster KFold(3) -> TimeSeriesSplit(3) (audit MEDIUM).
-- WalkForwardCV does not yet enforce per-fold scaler/winsorize (audit HIGH).
-- CORS allow_origins=["*"] in FastAPI (audit HIGH).
 
 ---
 
