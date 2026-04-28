@@ -110,6 +110,33 @@ DL tier `dl_long.csv` is still pre-F3 (NeuralForecast wrappers are mode-A,
 so their DA at h=5/h=20 has the off-by-one); a full re-run is ~30-60 min
 on CPU — deferred.
 
+### FT-Chronos M13 numbers re-verified (2026-04-28)
+
+Located the 5-fold checkpoints from the prior Colab T4 run inside
+`chronos_finetuned_artifacts/models/chronos_finetuned/fold_{0..4}/` (zip was
+unpacked but only fold_0 had been moved to the canonical
+`models/chronos_finetuned/` location). Copied the four missing folds in
+and re-ran `python -m scripts.benchmark_finetuned_chronos --horizons 1 5 20`
+with the F2-fixed trainer.
+
+Result — M13 paper numbers reproduce to within Δ < 0.01 pp:
+
+| Horizon | M13 published | Re-run post-F2 |
+|--------:|--------------:|---------------:|
+|     h=1 |         2.420 |          2.414 |
+|     h=5 |         2.587 |          2.579 |
+|    h=20 |         3.207 |          3.204 |
+
+Why: `scripts/benchmark_finetuned_chronos.py` sets `model.fold_id` directly
+via its own `evaluate_chronos` helper, bypassing the buggy
+`trainer.run_walk_forward` dispatch. So the FT-Chronos benchmark never
+went through the F2-bugged code path; the M13 numbers were already valid.
+F2 fix in `trainer.py` is still correct (defends future callers who use
+`run_walk_forward` with per-fold-aware models).
+
+**Paper Section 4.7 / Table V: no change needed.** Pre-condition for
+deadline (FT-Chronos 5-fold) cleared without re-running Colab.
+
 ### Known follow-ups (audit, full F6–F13 list for W4–W5)
 
 - F6 [HIGH]   FastAPI CORS `allow_origins=["*"]` + `allow_credentials=True`
