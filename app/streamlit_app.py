@@ -112,7 +112,7 @@ available_models = sorted(summary_df["model"].unique()) if not summary_df.empty 
 selected_models = st.sidebar.multiselect(
     "🤖 Models để hiển thị (leaderboard)",
     options=available_models,
-    default=available_models[:8] if len(available_models) >= 8 else available_models,
+    default=available_models,   # default = ALL 24 (was top-8 alphabetically)
 )
 
 st.sidebar.markdown("---")
