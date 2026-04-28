@@ -90,6 +90,26 @@ DA at h=1 unchanged (h=1 path was always correct, sanity-checked).
 validate F3 because mode-A path is exercised by classical + foundation, not
 ML wrappers. Always test the path the fix actually touches.
 
+**Second-pass regression (caught by peer review)**: my first attempt at
+rebuilding combined_v2 used `--output-name combined_v3_post_audit` and
+silently dropped the ML tier (script defaults to classical+ml+dl, but I
+overrode `--inputs` and forgot to keep ml_long.csv in the list). The
+published combined_v2 went from 24 models down to 17, removing
+Ridge / ElasticNet / XGBoost / LightGBM / CatBoost / RandomForest / SVR.
+
+Fix: re-ran classical + foundation with their canonical names
+(`classical_full_long.csv`, `foundation_long.csv`) overwriting prior files,
+then `python -m scripts.combine_leaderboards --inputs classical_full_long.csv
+ml_long.csv dl_long.csv foundation_long.csv --output-name combined_v2`.
+Result: 24 models back, Top-5 h=1 MAPE = RollingNaive 0.33%, Ridge 0.63%,
+ElasticNet 0.67%, RandomForest 2.81%, SeasonalNaive 2.91% (matches paper).
+Mode-A DA at h=20 still reflects F3 (AutoARIMA 56.4, AutoETS 58.7,
+AutoTheta 55.8 vs pre-audit 54.1 / 56.3 / 53.2).
+
+DL tier `dl_long.csv` is still pre-F3 (NeuralForecast wrappers are mode-A,
+so their DA at h=5/h=20 has the off-by-one); a full re-run is ~30-60 min
+on CPU — deferred.
+
 ### Known follow-ups (audit, full F6–F13 list for W4–W5)
 
 - F6 [HIGH]   FastAPI CORS `allow_origins=["*"]` + `allow_credentials=True`
