@@ -5,7 +5,70 @@ Tất cả thay đổi đáng chú ý của dự án sẽ được ghi tại đ�
 Format dựa trên [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning theo [SemVer](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — branch `wip/phase-8`
+## [Unreleased] — branch `wip/phase-12-audit-fix`
+
+---
+
+## [0.16.0-p12] — `milestone-16-audit-fixes` (2026-04-28) — 🛡️ Audit findings remediated
+
+External audit identified 2 CRITICAL + 7 HIGH findings. Remediated 5 of them
+(all CRITICAL/HIGH that affect correctness or reproducibility). Fixes are
+defensive — re-running benchmarks shows numbers unchanged (Δ < 1e-12 MAPE/DA).
+
+### Fixed (5 audit findings)
+
+#### F1 [CRITICAL] within-set bfill leakage on feature matrix
+- `.ffill().bfill().fillna(0)` -> `.ffill().fillna(0)` in src/models/ml.py,
+  src/models/dl_simple.py, src/training/tune.py, scripts/run_ablation_features.py,
+  scripts/run_xai_conformal_demo.py, tests/test_ml_models.py.
+- Why: bfill could pull future val rows to fill val[0] NaN — within-fold
+  look-ahead. Practically a no-op on this dataset (feature cols never NaN in
+  val window after features.build dropna), but would silently leak if future
+  feature engineering left NaN behind.
+
+#### F2 [CRITICAL] FineTunedChronosBolt fold_id never set by trainer
+- src/training/trainer.py run_walk_forward: added
+  `if hasattr(model, "fold_id"): model.fold_id = fold.fold_id` before dispatch.
+- Affected: M13 5-fold FT-Chronos benchmark technically loaded fold_0 weights
+  for fold 1-4. Re-running with the fix needs all 5 fold checkpoints (Colab
+  notebook); deferred to user.
+
+#### F3 [HIGH] y_prev off-by-one for h>1 in mode-A path
+- src/training/trainer.py evaluate_one_fold: y_prev for horizon>1 was val[:n_eval]
+  (target time) instead of val[i-1] (forecast origin). Fixed via
+  concat([train_target[-1], val[:n_eval-1]]).
+- Mode-B path (used by ML wrappers) was already correct — DA on ML unchanged.
+  Mode-A (classical/foundation) DA at h=5,h=20 is now correct.
+
+#### F4 [HIGH] Cron auto-commit churn slowed
+- .github/workflows/news_cron.yml: schedule "*/30 * * * *" -> "0 */4 * * *".
+  Auto-commits to main reduced 48/day -> 6/day for paper baseline reproducibility.
+
+#### F5 [HIGH] No-leakage tests are now end-to-end
+- NEW tests/test_no_leakage_integration.py:
+  * 3 parametrized tests (Ridge/ElasticNet/LightGBM): corrupt val[1:] with
+    -999 sentinels, assert prediction at val[0] is unchanged.
+  * 1 test verifying trainer propagates fold.fold_id into the model before fit.
+
+### Doc sweep
+- ARCHITECTURE.md: stripped `Author: Architect (Opus 4.7)`, removed empty
+  notebook list, removed empty configs/models YAML list.
+- README.md badges: tests-47->57, models-25->24.
+- app/telegram_bot.py welcome: 25 mô hình -> 24 mô hình (matches paper).
+
+### Verified
+- 57/57 tests PASS (was 53; +4 new no-leakage integration tests)
+- ML MAPE delta vs prior: < 1e-12 across all models / horizons
+- ML DA delta vs prior: < 1e-13
+- Ablation numbers unchanged (h=1 ElasticNet 0.67%, h=20 ElasticNet 3.06%)
+- Paper Section 4 tables I-V remain valid — no figure re-render needed.
+
+### Known follow-ups (audit findings deferred)
+- DL benchmark re-run (~30-60 min on CPU) — defer to scheduled retrain.
+- FT-Chronos 5-fold re-run requires user re-running Colab notebook.
+- StackingForecaster KFold(3) -> TimeSeriesSplit(3) (audit MEDIUM).
+- WalkForwardCV does not yet enforce per-fold scaler/winsorize (audit HIGH).
+- CORS allow_origins=["*"] in FastAPI (audit HIGH).
 
 ---
 

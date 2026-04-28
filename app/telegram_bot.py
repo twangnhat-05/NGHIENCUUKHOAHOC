@@ -86,7 +86,7 @@ def _model(horizon: int = 1):
 
 WELCOME = (
     "👋 Chào! Tôi là bot dự báo giá vàng SJC (Việt Nam).\n\n"
-    "📊 Pipeline: 25 mô hình ML/DL/Foundation, walk-forward CV no-leakage.\n"
+    "📊 Pipeline: 24 mô hình ML/DL/Foundation, walk-forward CV no-leakage.\n"
     "📄 Repo: github.com/twangnhat-05/NGHIENCUUKHOAHOC\n\n"
     "Commands:\n"
     "  /predict 1    — dự báo SJC 1 ngày tới\n"

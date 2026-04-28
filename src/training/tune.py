@@ -51,7 +51,7 @@ def tune_xgboost(
     feature_cols = select_feature_columns(df, target_col=target_col)
     X_tr = train[feature_cols].values
     y_tr = train[target_h_col].values
-    X_va = val[feature_cols].ffill().bfill().fillna(0).values
+    X_va = val[feature_cols].ffill().fillna(0).values
     y_va = val[target_h_col].values
 
     def objective(trial: optuna.Trial) -> float:
@@ -100,7 +100,7 @@ def tune_lightgbm(
     feature_cols = select_feature_columns(df, target_col=target_col)
     X_tr = train[feature_cols].values
     y_tr = train[target_h_col].values
-    X_va = val[feature_cols].ffill().bfill().fillna(0).values
+    X_va = val[feature_cols].ffill().fillna(0).values
     y_va = val[target_h_col].values
 
     def objective(trial: optuna.Trial) -> float:

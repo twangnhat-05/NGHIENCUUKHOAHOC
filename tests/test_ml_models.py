@@ -91,7 +91,7 @@ def test_ml_scaler_fit_only_on_train(small_features_df: pd.DataFrame) -> None:
     # The scaler.mean_ should match train statistics
     assert model._scaler is not None
     feature_cols = model._feature_cols
-    train_features = train[feature_cols].ffill().bfill().fillna(0).values
+    train_features = train[feature_cols].ffill().fillna(0).values
     expected_mean = train_features.mean(axis=0)
     np.testing.assert_allclose(model._scaler.mean_, expected_mean, rtol=1e-6)
 

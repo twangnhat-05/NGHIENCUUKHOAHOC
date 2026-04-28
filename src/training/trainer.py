@@ -142,13 +142,18 @@ def evaluate_one_fold(
         y_prev = np.concatenate([[train[target_col].iloc[-1]],
                                   val[target_col].to_numpy()[:n_val - 1]])
     else:
-        # Slice: predict[h-1:h-1+n_eval], target[0:n_eval], n_eval = n_val - (h-1)
+        # h-step rolling-origin: y_pred[i] := forecast made at origin train_end+i
+        #   target  : val[i + h - 1]  (h steps after origin)
+        #   origin  : val[i - 1]      (with train tail bridging i=0)
         n_eval = n_val - (horizon - 1)
         y_pred = y_pred_raw[horizon - 1: horizon - 1 + n_eval]
         y_true = val[target_col].to_numpy()[horizon - 1: horizon - 1 + n_eval]
-        # y_prev cho horizon h: giá trị h ngày trước y_true
-        prev_idx_start = max(0, 0)
-        y_prev = val[target_col].to_numpy()[:n_eval]
+        # FIX (audit P12 F3): origin = val[i-1], not val[i]. Off-by-one
+        # would make DA / HitRate compare against the wrong reference.
+        y_prev = np.concatenate([
+            [train[target_col].iloc[-1]],
+            val[target_col].to_numpy()[:n_eval - 1],
+        ])
 
     y_train = train[target_col].to_numpy()
     metrics = summary(y_true, y_pred, y_train=y_train, y_prev=y_prev, seasonal_period=5)
@@ -179,6 +184,11 @@ def run_walk_forward(
         for h in horizons:
             for model in models:
                 t0 = time.time()
+                # FIX (audit P12 F2): tell per-fold-checkpoint models which
+                # fold they're being evaluated on so they load the right
+                # weights (else FineTunedChronosBolt always uses fold_0).
+                if hasattr(model, "fold_id"):
+                    model.fold_id = fold.fold_id
                 # Dispatch
                 if getattr(model, "use_features", False):
                     metrics = evaluate_ml_one_fold(model, train_df, val_df, h, target_col)

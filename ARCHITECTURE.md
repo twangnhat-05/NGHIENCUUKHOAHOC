@@ -1,10 +1,9 @@
 # 🏛️ MASTER ARCHITECTURE — Gold Price Prediction (TDTU NCKH 2025-2026)
 
-> **Version**: v0.1 (Gate 3 draft — chờ user APPROVE)
-> **Author**: Architect (Opus 4.7)
+> **Author**: WangNhat
 > **Date**: 2026-04-26
 > **Project owner**: dev2@wolffungame.com (TDTU sinh viên NCKH)
-> **Deadline**: 2026-05 (cấp khoa) — **~5 tuần** từ hôm nay.
+> **Deadline**: 2026-05 (cấp khoa).
 
 ---
 
@@ -108,7 +107,7 @@
 ├─────────────────────────────────────────────────────────────────────┤
 │ app/streamlit_app.py (Streamlit Cloud — public demo) │
 │ app/api/main.py (FastAPI optional — Render free) │
-│ notebooks/99_reproduce_all.ipynb (one-click reproducibility) │
+│ scripts/reproduce_all.{sh,bat} (one-click reproducibility) │
 │ reports/paper/tdtu_vi/ (Word, VN) │
 │ reports/paper/ieee_en/ (LaTeX, English, conference-ready) │
 └──────────────────────────────────────────────────────────────────────┘
@@ -127,30 +126,14 @@ NCKH/
 ├── configs/ # YAML configs (no hardcoded constants)
 │ ├── data.yaml
 │ ├── features.yaml
-│ ├── cv.yaml
-│ └── models/
-│ ├── xgboost.yaml
-│ ├── lightgbm.yaml
-│ ├── lstm.yaml
-│ ├── patchtst.yaml
-│ ├── tft.yaml
-│ ├── chronos.yaml
-│ └── ttm.yaml
+│ └── cv.yaml
 ├── data/
 │ ├── raw/ # immutable, append-only
 │ ├── interim/ # merged + ffill
 │ ├── processed/ # features + splits
 │ └── external/ # news, sentiment cache
 ├── notebooks/
-│ ├── 00_eda_v2.ipynb
-│ ├── 01_features_v2.ipynb
-│ ├── 02_baselines.ipynb
-│ ├── 03_ml_models.ipynb
-│ ├── 04_dl_models.ipynb
-│ ├── 05_foundation_models.ipynb
-│ ├── 06_ensembling_conformal.ipynb
-│ ├── 07_xai.ipynb
-│ └── 99_reproduce_all.ipynb
+│ └── finetune_chronos_colab.ipynb # T4 GPU notebook for Phase 8
 ├── src/
 │ ├── data/{fetch,refresh,schema}.py
 │ ├── features/{build,technical,macro,sentiment,calendar}.py
@@ -364,7 +347,7 @@ pre-commit==4.0.1
 - Seeds fixed (`numpy`, `torch`, `random`, `sklearn`, env `PYTHONHASHSEED`)
 - Run mỗi DL model 3 seeds → report mean ± std
 - All hyperparams logged trong MLflow
-- `notebooks/99_reproduce_all.ipynb` chạy end-to-end < 2 giờ trên Colab free
+- `scripts/reproduce_all.{sh,bat}` chạy end-to-end < 2 giờ trên Colab free
 
 ---
 

@@ -62,7 +62,7 @@ def main() -> int:
     lgbm = LightGBMForecaster(horizon=h, n_estimators=300)
     lgbm.fit(train_df, target_col="SJC_ban_ra")
     feature_cols = lgbm._feature_cols
-    X_train = train_df[feature_cols].ffill().bfill().fillna(0.0).values
+    X_train = train_df[feature_cols].ffill().fillna(0.0).values
 
     shap_result = compute_shap_tree(lgbm._estimator, X_train, feature_names=feature_cols, sample_size=300)
     if "error" not in shap_result:

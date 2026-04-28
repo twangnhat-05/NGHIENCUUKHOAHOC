@@ -2,10 +2,10 @@ name: news-realtime-refresh
 
 on:
   schedule:
-    # Every 30 minutes — well within the 2,000 min/month free-tier budget
-    # (≈ 96 runs/day × 30 days ≈ 2,880 runs, but each run is < 30s on the
-    # free runner, so total compute ≈ 1,440 runner-seconds/day ≈ 720 min/month).
-    - cron: "*/30 * * * *"
+    # Every 4 hours (was every 30 minutes). Slower cadence reduces commit
+    # churn on main and keeps a stable baseline for paper reproducibility,
+    # while news/tone freshness stays within the same trading day.
+    - cron: "0 */4 * * *"
   workflow_dispatch: {}   # manual trigger from the Actions tab
 
 permissions:

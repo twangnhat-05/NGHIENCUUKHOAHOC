@@ -10,8 +10,8 @@
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3119/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-active-success.svg)]
-[![Tests: 47 passing](https://img.shields.io/badge/tests-47%20passing-brightgreen.svg)](tests/)
-[![Models: 25](https://img.shields.io/badge/models-25%20benchmarked-blue.svg)](reports/leaderboard/)
+[![Tests: 57 passing](https://img.shields.io/badge/tests-57%20passing-brightgreen.svg)](tests/)
+[![Models: 24](https://img.shields.io/badge/models-24%20benchmarked-blue.svg)](reports/leaderboard/)
 
 ## 🎯 Mục tiêu
 

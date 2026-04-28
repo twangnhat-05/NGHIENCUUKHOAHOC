@@ -83,7 +83,7 @@ class _MLBaseWrapper(BaseForecaster):
         valid = train_df.dropna(subset=[target_h_col]).copy()
         self._feature_cols = select_feature_columns(valid, target_col=target_col)
         # Fill NaN trong features (sentiment lags / first rows) — same logic as predict
-        X_df = valid[self._feature_cols].ffill().bfill().fillna(0.0)
+        X_df = valid[self._feature_cols].ffill().fillna(0.0)
         X = X_df.values
         y = valid[target_h_col].values
 
@@ -106,7 +106,7 @@ class _MLBaseWrapper(BaseForecaster):
         if self._estimator is None:
             raise RuntimeError(f"{self.name} chưa fit")
         # Use ffill cho NaN trong test (vì mỗi val row có thể có NaN từ feature lag)
-        X_df = test_df[self._feature_cols].ffill().bfill().fillna(0.0)
+        X_df = test_df[self._feature_cols].ffill().fillna(0.0)
         X = X_df.values
         if self._scaler is not None:
             X = self._scaler.transform(X)

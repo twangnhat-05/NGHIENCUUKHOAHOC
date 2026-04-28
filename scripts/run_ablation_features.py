@@ -89,7 +89,7 @@ def fit_predict(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Fit + predict on train/val using only `feature_cols`. Returns (y_true, y_pred)."""
     valid_train = train_df.dropna(subset=[target_h_col]).copy()
-    X_train = valid_train[feature_cols].ffill().bfill().fillna(0.0).values
+    X_train = valid_train[feature_cols].ffill().fillna(0.0).values
     y_train = valid_train[target_h_col].values
 
     scaler = StandardScaler()
@@ -97,7 +97,7 @@ def fit_predict(
     estimator.fit(X_train, y_train)
 
     val_eval = val_df.dropna(subset=[target_h_col]).copy()
-    X_val = val_eval[feature_cols].ffill().bfill().fillna(0.0).values
+    X_val = val_eval[feature_cols].ffill().fillna(0.0).values
     X_val = scaler.transform(X_val)
     y_pred = estimator.predict(X_val)
     y_true = val_eval[target_h_col].values

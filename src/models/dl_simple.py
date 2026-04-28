@@ -89,8 +89,8 @@ class _DLBaseWrapper(BaseForecaster):
         if len(self._feature_cols) == 0:
             raise RuntimeError("No feature columns selected for DL")
 
-        X_raw = train_df[self._feature_cols].ffill().bfill().fillna(0.0).values
-        y_raw = train_df[target_col].ffill().bfill().fillna(0.0).values
+        X_raw = train_df[self._feature_cols].ffill().fillna(0.0).values
+        y_raw = train_df[target_col].ffill().fillna(0.0).values
 
         self._scaler = StandardScaler()
         X_scaled = self._scaler.fit_transform(X_raw)
@@ -168,7 +168,7 @@ class _DLBaseWrapper(BaseForecaster):
             return np.zeros(len(test_df))
 
         # Prepare val features
-        X_val_raw = test_df[self._feature_cols].ffill().bfill().fillna(0.0).values
+        X_val_raw = test_df[self._feature_cols].ffill().fillna(0.0).values
         X_val_scaled = self._scaler.transform(X_val_raw)
 
         # Concatenate train tail + val to form sequences
