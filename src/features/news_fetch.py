@@ -14,7 +14,11 @@ import argparse
 import json
 from datetime import datetime
 from pathlib import Path
-from xml.etree import ElementTree as ET
+try:
+    # defusedxml hardens against XXE / billion-laughs in untrusted RSS feeds
+    from defusedxml import ElementTree as ET
+except ImportError:  # pragma: no cover  (graceful fallback for old envs)
+    from xml.etree import ElementTree as ET
 
 import pandas as pd
 import requests

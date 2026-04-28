@@ -55,9 +55,11 @@ jobs:
           python -m src.features.build
           python -m src.features.sentiment stub
 
-      - name: Show data freshness
+      - name: Show data freshness + sanity gate
+        id: sanity
         run: |
           python - <<'PY'
+          import sys
           import pandas as pd
           for p in [
               "data/interim/merged.parquet",
@@ -74,6 +76,38 @@ jobs:
                       print(f"{p}: {len(df)} rows (no Date column)")
               except Exception as e:
                   print(f"{p}: read failed -- {e}")
+
+          # ---- SANITY GATE ----
+          # Block bot from auto-committing obviously-broken parquet
+          # (e.g. SJC scraper unit drift, all-NaN merged, stale data).
+          path = "data/processed/features_v2_with_sentiment.parquet"
+          df = pd.read_parquet(path)
+          fails = []
+          if "SJC_ban_ra" in df.columns:
+              s = df["SJC_ban_ra"].dropna()
+              if len(s) == 0:
+                  fails.append("SJC_ban_ra all-NaN")
+              else:
+                  lo, hi = float(s.min()), float(s.max())
+                  if not (50 <= lo and hi <= 250):
+                      fails.append(f"SJC_ban_ra out of [50,250] range: [{lo:.2f},{hi:.2f}]")
+                  if s.iloc[-1] < 50 or s.iloc[-1] > 250:
+                      fails.append(f"SJC_ban_ra last row out of range: {s.iloc[-1]:.2f}")
+          else:
+              fails.append("SJC_ban_ra column missing")
+          if "Date" in df.columns:
+              latest = pd.to_datetime(df["Date"]).max()
+              age_days = (pd.Timestamp.utcnow().tz_localize(None) - latest).days
+              if age_days > 14:
+                  fails.append(f"latest Date is {age_days}d old (> 14d)")
+          if len(df) < 1500:
+              fails.append(f"row count {len(df)} < expected 1500+")
+          if fails:
+              print("\n::error::Sanity gate FAILED:")
+              for f in fails:
+                  print(f"  - {f}")
+              sys.exit(1)
+          print("\nSanity gate passed.")
           PY
 
       - name: Commit refreshed artefacts (if changed)

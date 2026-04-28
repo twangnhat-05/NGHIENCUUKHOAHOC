@@ -272,9 +272,26 @@ with tab_predict:
                 train = features_df.iloc[:cut].copy()
                 test = features_df.iloc[cut:].copy()
                 model.fit(train, target_col="SJC_ban_ra")
-                base_preds = model.predict(test)
-                test_dates = pd.to_datetime(test["Date"]).reset_index(drop=True)
-                actual = test["SJC_ban_ra"].reset_index(drop=True)
+                base_preds = np.asarray(model.predict(test))
+
+                # Predict at row i is the forecast for SJC `horizon` business
+                # days AFTER test["Date"].iloc[i]. To compare honestly we
+                # need (a) the actual at date+h (= y_h{horizon} column,
+                # already shifted in build.py) and (b) plot the prediction
+                # at the same date+h on the chart.
+                target_h_col = f"y_h{horizon}"
+                if target_h_col not in test.columns:
+                    test[target_h_col] = test["SJC_ban_ra"].shift(-horizon)
+
+                test_dates_origin = pd.to_datetime(test["Date"]).reset_index(drop=True)
+                # Forecast date = origin date + horizon business days
+                test_dates_target = test_dates_origin + pd.tseries.offsets.BDay(horizon)
+
+                actual_target = test[target_h_col].reset_index(drop=True)
+                # Drop the trailing rows where actual_target is NaN (we don't
+                # know the future yet); MAPE / chart use the valid rows only.
+                valid_mask = ~actual_target.isna()
+                n_valid = int(valid_mask.sum())
 
                 # Live-tone adjustment (only the LATEST point — context for
                 # today's forecast, not retroactive recalibration).
@@ -287,30 +304,45 @@ with tab_predict:
                     adj_preds[-1] = adj_last
 
                 fig = go.Figure()
-                fig.add_trace(go.Scatter(x=test_dates, y=actual, name="Actual",
-                                          line=dict(color="black", width=2)))
-                fig.add_trace(go.Scatter(x=test_dates, y=base_preds,
-                                          name="ElasticNet base",
-                                          line=dict(color="#2ca02c", width=2)))
+                # Actual line: plot historical SJC at its observation date
+                fig.add_trace(go.Scatter(
+                    x=test_dates_origin,
+                    y=test["SJC_ban_ra"].reset_index(drop=True),
+                    name="Actual SJC", line=dict(color="black", width=2),
+                ))
+                # Predictions plotted at the date they actually correspond to
+                # (date + h business days), not at the row's origin date.
+                fig.add_trace(go.Scatter(
+                    x=test_dates_target,
+                    y=base_preds,
+                    name=f"ElasticNet pred (h={horizon})",
+                    line=dict(color="#2ca02c", width=2, dash="dot"),
+                ))
                 if apply_tone and snap.tone_mean is not None:
                     fig.add_trace(go.Scatter(
-                        x=test_dates.tail(1), y=[adj_preds[-1]],
+                        x=[test_dates_target.iloc[-1]], y=[adj_preds[-1]],
                         mode="markers", marker=dict(size=12, color="#1565C0",
                                                     symbol="star"),
                         name=f"News-adjusted (tone={snap.tone_mean:+.1f})",
                     ))
                 fig.update_layout(
-                    title=f"ElasticNet Forecast h={horizon} (last 100 days)",
+                    title=f"ElasticNet Forecast h={horizon} (last 100 days; pred shown at date+{horizon} business days)",
                     xaxis_title="Date", yaxis_title="SJC bán ra (triệu VND)",
                     height=450, hovermode="x unified",
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
-                # MAPE on the test slice (computed on the BASE forecast — the
-                # adjustment only touches the very last point).
-                mape = np.mean(np.abs((actual.values - base_preds) / actual.values)) * 100
+                # MAPE: pred vs actual at the SAME target date (i.e., y_h{h}).
+                if n_valid > 0:
+                    a = actual_target[valid_mask].to_numpy()
+                    p = base_preds[: len(actual_target)][valid_mask.values]
+                    mape = np.mean(np.abs((a - p) / a)) * 100
+                else:
+                    mape = float("nan")
                 col_a, col_b, col_c = st.columns(3)
-                col_a.metric("MAPE (test)", f"{mape:.3f}%")
+                col_a.metric("MAPE (test)", f"{mape:.3f}%",
+                             help=f"Pred vs actual at date+{horizon}; "
+                                  f"{n_valid}/{len(test)} rows have ground truth")
                 col_b.metric("Base forecast (latest)",
                              f"{base_preds[-1]:.2f}M VND")
                 if apply_tone and snap.tone_mean is not None:

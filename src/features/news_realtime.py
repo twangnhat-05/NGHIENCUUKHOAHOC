@@ -18,7 +18,11 @@ import json
 import time
 from datetime import datetime, timezone
 from urllib.parse import quote
-from xml.etree import ElementTree as ET
+try:
+    # defusedxml hardens against XXE / billion-laughs in untrusted RSS feeds
+    from defusedxml import ElementTree as ET
+except ImportError:  # pragma: no cover
+    from xml.etree import ElementTree as ET
 
 import pandas as pd
 import requests

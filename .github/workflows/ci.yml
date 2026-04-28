@@ -45,13 +45,18 @@ jobs:
  ruff check src/ tests/ --output-format=github || echo "Lint warnings (non-blocking)"
  continue-on-error: true
 
- - name: Run pytest
+ - name: Run pytest (all suites — gate against silent regressions)
  env:
  PYTHONPATH: .
  PYTHONIOENCODING: utf-8
  run: |
- # Skip tests that need heavy DL deps
- pytest tests/test_metrics.py tests/test_cv_no_leakage.py tests/test_features.py tests/test_stat_tests.py -v --tb=short
+ # Heavy DL deps are not installed in this minimal CI env, so tests
+ # that import torch / transformers will fail-import. We still want
+ # every other test file (no_leakage_integration, ml_models,
+ # live_tone) gated on every push.
+ pytest tests/ -v --tb=short \
+ --ignore=tests/test_dl_models.py \
+ --ignore=tests/test_foundation_models.py
 
  - name: Coverage report (advisory)
  env:
