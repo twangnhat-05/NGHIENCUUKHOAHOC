@@ -1,0 +1,860 @@
+/* ===========================================================
+   Aeux-style — Deep navy + emerald green
+   Dark-first, single mode. Inspired by reference.jpg
+   =========================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap");
+
+:root {
+  --bg:             #0B1426;
+  --bg-deep:        #0A0F1E;     /* sidebar */
+  --surface:        #101A30;
+  --surface-2:      #16213D;
+  --surface-tint:   rgba(34, 197, 94, 0.08);
+  --hairline:       #1E293B;
+  --hairline-soft:  rgba(255, 255, 255, 0.06);
+
+  --primary:        #22C55E;     /* emerald */
+  --primary-soft:   rgba(34, 197, 94, 0.14);
+  --primary-glow:   rgba(34, 197, 94, 0.35);
+  --primary-deep:   #15803D;
+
+  --gold:           #FCD34D;
+  --danger:         #EF4444;
+  --warning:        #F59E0B;
+  --info:           #38BDF8;
+
+  --ink:            #F8FAFC;
+  --ink-soft:       #E2E8F0;
+  --muted:          #94A3B8;
+  --muted-2:        #64748B;
+
+  --shadow-card:    0 8px 24px rgba(0, 0, 0, 0.35), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  --shadow-glow:    0 0 0 1px rgba(34, 197, 94, 0.15), 0 12px 40px rgba(34, 197, 94, 0.10);
+
+  --radius:         18px;
+  --radius-sm:      12px;
+  --radius-pill:    999px;
+
+  --space-1:        4px;
+  --space-2:        8px;
+  --space-3:        12px;
+  --space-4:        16px;
+  --space-6:        24px;
+  --space-8:        32px;
+}
+
+/* ── Base ────────────────────────────────────────────────── */
+html, body, [class*="css"], .stApp {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+  background: var(--bg) !important;
+  color: var(--ink);
+}
+.stApp { background: var(--bg) !important; }
+
+/* Subtle radial glow behind page (Aeux-style) */
+.stApp::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(900px 500px at 85% -10%, rgba(34, 197, 94, 0.10), transparent 60%),
+    radial-gradient(700px 400px at -5% 100%, rgba(34, 197, 94, 0.06), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+.main { position: relative; z-index: 1; }
+
+h1, h2, h3, h4 {
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+h1 { font-size: 2rem;   line-height: 1.15; }
+h2 { font-size: 1.4rem; line-height: 1.25; }
+h3 { font-size: 1.1rem; line-height: 1.3;  }
+
+p, span, label, li {
+  color: var(--ink-soft);
+}
+
+/* ── Streamlit header + toolbar (FORCE-SHOW the kebab menu) ────
+   Cover legacy + current testids; bright icon color on dark bg. */
+header[data-testid="stHeader"],
+header.stHeader,
+[data-testid="stHeader"] {
+  background: var(--surface) !important;
+  border-bottom: 1px solid var(--hairline) !important;
+  height: auto !important;
+  min-height: 3.25rem !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 999999 !important;
+  display: flex !important;
+  align-items: center !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+[data-testid="stToolbar"],
+[data-testid="stStatusWidget"],
+[data-testid="stMainMenu"],
+#MainMenu,
+button[kind="header"],
+[data-testid="stHeaderActionElements"] {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 1000000 !important;
+}
+[data-testid="stToolbar"] {
+  right: var(--space-4) !important;
+}
+/* Toolbar baseline — clean reset, no forced width on every button */
+[data-testid="stToolbar"] button {
+  color: #F8FAFC !important;
+  fill: #F8FAFC !important;
+  opacity: 1 !important;
+  background: var(--surface-2) !important;
+  border: 1px solid var(--hairline) !important;
+  border-radius: 10px !important;
+  height: 38px !important;
+  pointer-events: auto !important;
+  transition: all 160ms ease;
+}
+[data-testid="stToolbar"] svg,
+[data-testid="stMainMenu"] svg {
+  width: 18px !important;
+  height: 18px !important;
+  color: var(--ink) !important;
+}
+
+/* Kebab / Settings (Main Menu) — square 38×38 icon button */
+[data-testid="stMainMenu"] button {
+  width: 38px !important;
+  min-width: 38px !important;
+  max-width: 38px !important;
+  padding: 8px !important;
+}
+[data-testid="stMainMenu"] button:hover {
+  background: var(--primary-soft) !important;
+  border-color: var(--primary) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px var(--primary-glow);
+}
+
+/* Status widget (running indicator) — square */
+[data-testid="stStatusWidget"] {
+  margin-right: 8px !important;
+}
+[data-testid="stStatusWidget"] button {
+  width: 38px !important;
+  min-width: 38px !important;
+  padding: 8px !important;
+}
+
+/* ── Replace kebab ⋮ with a gear ⚙ icon on the Main Menu ──── */
+[data-testid="stMainMenu"] button > svg,
+[data-testid="stMainMenu"] button > div > svg {
+  display: none !important;
+}
+[data-testid="stMainMenu"] button {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+[data-testid="stMainMenu"] button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 20px;
+  height: 20px;
+  background-color: #F8FAFC;
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='3'/><path d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z'/></svg>");
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='3'/><path d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z'/></svg>");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: 20px 20px;
+  mask-size: 20px 20px;
+  pointer-events: none;
+  transition: background-color 160ms ease, transform 240ms ease;
+}
+[data-testid="stMainMenu"] button:hover::before {
+  background-color: var(--primary);
+  transform: rotate(35deg);
+}
+
+/* ── Deploy button — text content, auto width, override any prior icon sizing ── */
+[data-testid="stToolbar"] [data-testid="stDeployButton"],
+[data-testid="stToolbar"] [data-testid="stDeployButton"] button,
+[data-testid="stToolbar"] [data-testid="stDeployButton"] button[kind="header"],
+header [data-testid="stDeployButton"] button {
+  width: auto !important;
+  min-width: 92px !important;
+  max-width: none !important;
+  height: 38px !important;
+  padding: 0 16px !important;
+  background: var(--surface-2) !important;
+  border: 1px solid var(--hairline) !important;
+  border-radius: 10px !important;
+  color: var(--ink) !important;
+  font-weight: 600 !important;
+  font-size: 0.84rem !important;
+  font-family: "Inter", sans-serif !important;
+  letter-spacing: -0.01em !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  flex-shrink: 0 !important;
+  transition: all 160ms ease !important;
+}
+[data-testid="stToolbar"] [data-testid="stDeployButton"] button:hover,
+header [data-testid="stDeployButton"] button:hover {
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+  background: var(--primary-soft) !important;
+  transform: translateY(-1px);
+}
+[data-testid="stToolbar"] [data-testid="stDeployButton"] svg,
+header [data-testid="stDeployButton"] svg {
+  width: 14px !important;
+  height: 14px !important;
+  display: inline-block !important;
+  flex-shrink: 0 !important;
+}
+[data-testid="stToolbar"] [data-testid="stDeployButton"] span,
+header [data-testid="stDeployButton"] span {
+  display: inline-block !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+}
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+[data-testid="stSidebar"] {
+  background: var(--bg-deep) !important;
+  border-right: 1px solid var(--hairline);
+}
+[data-testid="stSidebar"] > div:first-child {
+  padding-top: var(--space-2);
+}
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+  color: var(--ink);
+}
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] p {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
+  color: var(--muted) !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Brand block at top of sidebar */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 8px 18px 8px;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: var(--space-4);
+}
+.brand-logo {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%);
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.35);
+  font-weight: 800; color: #062013;
+  font-family: "Inter", sans-serif;
+  letter-spacing: -0.04em; font-size: 1.1rem;
+}
+.brand-text { display: flex; flex-direction: column; line-height: 1.1; }
+.brand-name { color: var(--ink); font-weight: 700; font-size: 0.95rem; letter-spacing: -0.01em; }
+.brand-sub  { color: var(--muted); font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; }
+
+.sidebar-section {
+  font-size: 0.68rem; font-weight: 700;
+  color: var(--muted-2);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: var(--space-4) 0 var(--space-2) 4px;
+}
+
+.sidebar-footer {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--hairline);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.sidebar-footer a { color: var(--primary); text-decoration: none; }
+.sidebar-footer a:hover { text-decoration: underline; }
+
+/* Sidebar inputs: dark style */
+[data-testid="stSidebar"] [data-baseweb="input"] input,
+[data-testid="stSidebar"] [data-baseweb="select"] > div,
+[data-testid="stSidebar"] [data-baseweb="datepicker"] input {
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  border-color: var(--hairline) !important;
+}
+
+/* ── Hero block ──────────────────────────────────────────── */
+.gold-hero {
+  position: relative;
+  background:
+    linear-gradient(180deg, var(--surface) 0%, rgba(16, 26, 48, 0.6) 100%),
+    radial-gradient(420px 200px at 100% 0%, var(--primary-soft), transparent 70%);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: var(--space-6) var(--space-8);
+  margin-bottom: var(--space-6);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.gold-hero::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 4px; height: 100%;
+  background: linear-gradient(180deg, var(--primary) 0%, transparent 100%);
+}
+.gold-hero h1 {
+  margin: 0 0 var(--space-3) 0;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--ink) !important;
+  line-height: 1.15;
+}
+.gold-hero h1 .accent { color: var(--primary); }
+.gold-hero p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.98rem;
+  line-height: 1.6;
+  max-width: 880px;
+  font-weight: 400;
+}
+.gold-hero .badge-row {
+  margin-top: var(--space-4);
+  display: flex; flex-wrap: wrap; gap: var(--space-2);
+}
+.gold-hero .badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  color: var(--ink-soft);
+  letter-spacing: 0.01em;
+}
+.gold-hero .badge.green {
+  background: var(--primary-soft);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #86EFAC;
+}
+.gold-hero .badge.gold {
+  background: rgba(252, 211, 77, 0.12);
+  border-color: rgba(252, 211, 77, 0.3);
+  color: var(--gold);
+}
+
+/* ── Equal-height column wrappers (KPI fix) ───────────────── */
+[data-testid="stHorizontalBlock"] {
+  align-items: stretch !important;
+}
+[data-testid="stHorizontalBlock"] > [data-testid="column"] {
+  display: flex !important;
+}
+[data-testid="stHorizontalBlock"] > [data-testid="column"] > div {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+[data-testid="stHorizontalBlock"] > [data-testid="column"] [data-testid="stVerticalBlock"] {
+  height: 100%;
+  width: 100%;
+}
+
+/* ── KPI metric cards (Aeux-style dark cards) ─────────────── */
+/* FIXED height (not min-height) so all 4 cards lock to identical
+   size regardless of whether they have a delta pill. */
+[data-testid="stMetric"] {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 18px 22px;
+  box-shadow: var(--shadow-card);
+  height: 148px !important;
+  min-height: 148px !important;
+  max-height: 148px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+  overflow: hidden;
+}
+/* Wrapper that Streamlit puts around metric inside a column */
+[data-testid="stHorizontalBlock"] [data-testid="stElementContainer"]:has([data-testid="stMetric"]) {
+  height: 100%;
+}
+[data-testid="stMetric"]:hover {
+  transform: translateY(-2px);
+  border-color: rgba(34, 197, 94, 0.35);
+  box-shadow: var(--shadow-glow);
+}
+[data-testid="stMetricLabel"] {
+  color: var(--muted) !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--space-3);
+}
+[data-testid="stMetricLabel"] > div,
+[data-testid="stMetricLabel"] p {
+  white-space: normal !important;
+  line-height: 1.25 !important;
+  color: var(--muted) !important;
+}
+[data-testid="stMetricValue"] {
+  font-family: "JetBrains Mono", "SF Mono", monospace;
+  font-size: 1.65rem !important;
+  font-weight: 700 !important;
+  color: var(--ink) !important;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  word-break: break-word;
+}
+[data-testid="stMetricDelta"] {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.78rem !important;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  margin-top: var(--space-2);
+  display: inline-flex !important;
+  align-items: center; gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--primary-soft);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  width: fit-content;
+}
+/* Streamlit colors deltas: green=positive, red=negative — keep their semantics */
+[data-testid="stMetricDelta"] svg { width: 12px; height: 12px; }
+
+/* ── Tabs ────────────────────────────────────────────────── */
+[data-testid="stTabs"] [data-baseweb="tab-list"] {
+  gap: 2px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  margin-bottom: var(--space-6);
+}
+[data-testid="stTabs"] [data-baseweb="tab"] {
+  background: transparent;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 500;
+  color: var(--muted);
+  border-bottom: none !important;
+  transition: all 140ms ease;
+}
+[data-testid="stTabs"] [data-baseweb="tab"]:hover {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+[data-testid="stTabs"] [aria-selected="true"] {
+  color: #062013;
+  background: var(--primary) !important;
+  font-weight: 600;
+}
+[data-testid="stTabs"] [data-baseweb="tab-highlight"] { display: none !important; }
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.stButton > button {
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 9px 18px;
+  transition: all 140ms ease;
+}
+.stButton > button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--surface-2);
+}
+.stButton > button[kind="primary"] {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #062013;
+  box-shadow: 0 4px 14px var(--primary-glow);
+}
+.stButton > button[kind="primary"]:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  color: #062013;
+}
+
+/* ── Toggles & checkboxes ────────────────────────────────── */
+[data-testid="stToggle"] label {
+  color: var(--ink-soft);
+}
+
+/* ===========================================================
+   GLASS COMPONENTS  —  multiselect / select / popovers / menus
+   =========================================================== */
+
+/* ── Generic input shell ─────────────────────────────────── */
+[data-baseweb="input"] input,
+[data-baseweb="textarea"] textarea {
+  background: rgba(16, 26, 48, 0.55) !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--hairline) !important;
+  border-radius: 10px !important;
+  backdrop-filter: blur(8px);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+[data-baseweb="input"] input:focus,
+[data-baseweb="textarea"] textarea:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px var(--primary-soft) !important;
+}
+
+/* ── Select / Multiselect control (the visible field) ────── */
+[data-baseweb="select"] > div:first-child {
+  background: rgba(16, 26, 48, 0.55) !important;
+  border: 1px solid var(--hairline) !important;
+  border-radius: 10px !important;
+  color: var(--ink) !important;
+  min-height: 42px !important;
+  backdrop-filter: blur(8px);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+[data-baseweb="select"]:hover > div:first-child {
+  border-color: rgba(34, 197, 94, 0.4) !important;
+}
+[data-baseweb="select"][data-active="true"] > div:first-child,
+[data-baseweb="select"]:focus-within > div:first-child {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px var(--primary-soft) !important;
+}
+
+/* ── Multiselect chips (selected items as emerald pills) ─── */
+[data-baseweb="select"] [data-baseweb="tag"],
+[data-baseweb="tag"][role="button"] {
+  background: linear-gradient(135deg,
+              rgba(34, 197, 94, 0.18) 0%,
+              rgba(34, 197, 94, 0.08) 100%) !important;
+  border: 1px solid rgba(34, 197, 94, 0.35) !important;
+  border-radius: var(--radius-pill) !important;
+  color: #BBF7D0 !important;
+  font-weight: 600 !important;
+  font-size: 0.78rem !important;
+  padding: 2px 4px 2px 10px !important;
+  margin: 2px 4px 2px 0 !important;
+  backdrop-filter: blur(4px);
+  transition: all 140ms ease;
+}
+[data-baseweb="select"] [data-baseweb="tag"]:hover {
+  background: rgba(34, 197, 94, 0.22) !important;
+  border-color: rgba(34, 197, 94, 0.55) !important;
+  transform: translateY(-1px);
+}
+/* Tag inner span (label text) */
+[data-baseweb="select"] [data-baseweb="tag"] span {
+  color: #BBF7D0 !important;
+  font-weight: 600 !important;
+}
+/* Tag close × button */
+[data-baseweb="select"] [data-baseweb="tag"] [role="button"],
+[data-baseweb="select"] [data-baseweb="tag"] [role="presentation"] svg {
+  color: #BBF7D0 !important;
+  fill: #BBF7D0 !important;
+  opacity: 0.7;
+  border-radius: 999px;
+  transition: opacity 140ms ease;
+}
+[data-baseweb="select"] [data-baseweb="tag"] [role="button"]:hover {
+  opacity: 1;
+  background: rgba(34, 197, 94, 0.25) !important;
+}
+
+/* ── Placeholder text in select ──────────────────────────── */
+[data-baseweb="select"] [aria-hidden="true"]:not([data-baseweb]) {
+  color: var(--muted) !important;
+}
+
+/* ── Dropdown popover panel (Models list, Horizon list, …) ── */
+[data-baseweb="popover"] {
+  z-index: 999999;
+}
+[data-baseweb="popover"] [data-baseweb="menu"],
+[data-baseweb="menu"],
+[role="listbox"] {
+  background: rgba(16, 26, 48, 0.85) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 14px !important;
+  box-shadow:
+      0 24px 60px rgba(0, 0, 0, 0.55),
+      0 0 0 1px rgba(34, 197, 94, 0.10),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+  padding: 6px !important;
+  overflow: hidden;
+}
+[data-baseweb="menu"] li,
+[role="listbox"] li,
+[role="option"] {
+  background: transparent !important;
+  color: var(--ink-soft) !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  margin: 1px 0 !important;
+  font-size: 0.88rem !important;
+  font-weight: 500 !important;
+  transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+}
+[data-baseweb="menu"] li:hover,
+[role="listbox"] li:hover,
+[role="option"]:hover,
+[role="option"][aria-selected="true"] {
+  background: rgba(34, 197, 94, 0.14) !important;
+  color: #DCFCE7 !important;
+}
+[role="option"][aria-selected="true"]::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--primary);
+  border-radius: 999px;
+  margin-right: 8px;
+  box-shadow: 0 0 8px var(--primary-glow);
+}
+
+/* ── Date input — calendar popover ───────────────────────── */
+[data-baseweb="calendar"] {
+  background: rgba(16, 26, 48, 0.85) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55) !important;
+}
+[data-baseweb="calendar"] [aria-selected="true"] {
+  background: var(--primary) !important;
+  color: #062013 !important;
+  border-radius: 8px !important;
+}
+[data-baseweb="calendar"] [role="gridcell"]:hover {
+  background: rgba(34, 197, 94, 0.18) !important;
+  border-radius: 8px !important;
+}
+
+/* ============================================================
+   STREAMLIT KEBAB MENU (top-right ⋮)  —  glass + emerald
+   The menu opens as a popover. We style its container, items,
+   icons, dividers, hover state.
+   ============================================================ */
+
+/* Main menu trigger (the ⋮ button) — already styled in header,
+   here just the dropdown that appears below it. */
+[data-testid="stMainMenuPopover"],
+[data-testid="stMainMenuList"],
+ul[role="menu"],
+[data-testid="main-menu-list"] {
+  background: rgba(16, 26, 48, 0.85) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  border-radius: 14px !important;
+  box-shadow:
+      0 30px 70px rgba(0, 0, 0, 0.60),
+      0 0 0 1px rgba(34, 197, 94, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  padding: 8px !important;
+  min-width: 240px !important;
+  overflow: hidden !important;
+}
+
+ul[role="menu"] li,
+[role="menuitem"],
+[data-testid="main-menu-list"] li,
+[data-testid="stMainMenuList"] li {
+  background: transparent !important;
+  color: var(--ink-soft) !important;
+  border-radius: 10px !important;
+  padding: 10px 14px !important;
+  margin: 2px 0 !important;
+  font-size: 0.9rem !important;
+  font-weight: 500 !important;
+  font-family: "Inter", sans-serif !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, transform 140ms ease;
+}
+ul[role="menu"] li:hover,
+[role="menuitem"]:hover,
+[data-testid="main-menu-list"] li:hover,
+[data-testid="stMainMenuList"] li:hover {
+  background: linear-gradient(135deg,
+              rgba(34, 197, 94, 0.18) 0%,
+              rgba(34, 197, 94, 0.06) 100%) !important;
+  color: #DCFCE7 !important;
+  transform: translateX(2px);
+}
+
+/* Icons inside menu items */
+ul[role="menu"] li svg,
+[role="menuitem"] svg,
+[data-testid="stMainMenuList"] svg {
+  color: var(--muted) !important;
+  fill: var(--muted) !important;
+  width: 18px !important;
+  height: 18px !important;
+  flex-shrink: 0;
+  transition: color 140ms ease, fill 140ms ease;
+}
+ul[role="menu"] li:hover svg,
+[role="menuitem"]:hover svg {
+  color: var(--primary) !important;
+  fill: var(--primary) !important;
+}
+
+/* Divider line in menu */
+ul[role="menu"] hr,
+[role="separator"],
+[data-testid="stMainMenuList"] hr {
+  border: none !important;
+  height: 1px !important;
+  background: linear-gradient(90deg, transparent, var(--hairline), transparent) !important;
+  margin: 6px 4px !important;
+}
+
+/* Section headers inside menu (e.g. "Develop", "About") */
+ul[role="menu"] [data-testid="stMainMenuLabel"],
+[data-testid="stMainMenuList"] [class*="MenuItemHeader"] {
+  color: var(--muted-2) !important;
+  font-size: 0.66rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  padding: 8px 14px 4px !important;
+  background: transparent !important;
+}
+
+/* Keyboard hint chips on right (e.g. "R" for Rerun) */
+ul[role="menu"] kbd,
+[role="menuitem"] kbd,
+[data-testid="stMainMenuList"] kbd {
+  margin-left: auto !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid var(--hairline) !important;
+  border-radius: 6px !important;
+  padding: 2px 8px !important;
+  font-family: "JetBrains Mono", monospace !important;
+  font-size: 0.72rem !important;
+  color: var(--muted) !important;
+  box-shadow: inset 0 -1px 0 var(--hairline);
+}
+
+/* ── Dataframe / tables ──────────────────────────────────── */
+[data-testid="stDataFrame"] {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+}
+
+/* ── Captions ────────────────────────────────────────────── */
+[data-testid="stCaptionContainer"], .stCaption, small {
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* ── Alerts ──────────────────────────────────────────────── */
+[data-testid="stAlert"] {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-sm);
+  color: var(--ink-soft);
+}
+
+/* ── Plotly charts wrapper ───────────────────────────────── */
+[data-testid="stPlotlyChart"] {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-card);
+}
+
+/* ── Subheader / markdown ────────────────────────────────── */
+.main h2, .main h3 { margin-top: var(--space-6); }
+
+/* ── Footer ──────────────────────────────────────────────── */
+.gold-footer {
+  margin-top: var(--space-8);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--hairline);
+  color: var(--muted);
+  font-size: 0.82rem;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.gold-footer a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+.gold-footer a:hover { text-decoration: underline; }
+
+/* ── Hide bottom Streamlit footer ────────────────────────── */
+footer { visibility: hidden; height: 0; }
+
+/* ── Block container ─────────────────────────────────────── */
+.block-container {
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+  max-width: 1320px;
+}
+
+/* ── Scrollbar (subtle dark) ─────────────────────────────── */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--surface-2); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #2A3556; }

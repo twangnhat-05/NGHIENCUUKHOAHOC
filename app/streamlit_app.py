@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.io as pio
 import streamlit as st
 
 warnings.filterwarnings("ignore")
@@ -38,10 +39,50 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-st.title("🏅 Vietnamese Gold Price Forecasting (SJC)")
-st.caption(
-    "TDTU NCKH 2025-2026 — Multi-horizon forecasting với 24 models "
-    "(classical + ML + DL + foundation) trên walk-forward CV."
+# ── Inject custom CSS ────────────────────────────────────────
+_CSS_PATH = _PROJECT_ROOT / "app" / "static" / "theme.css"
+if _CSS_PATH.exists():
+    st.markdown(f"<style>{_CSS_PATH.read_text(encoding='utf-8')}</style>",
+                unsafe_allow_html=True)
+
+# ── Define Plotly template (Aeux dark + emerald) ─────────────
+_GOLD_TEMPLATE = go.layout.Template()
+_GOLD_TEMPLATE.layout = dict(
+    font=dict(family="Inter, system-ui, sans-serif", size=13, color="#E2E8F0"),
+    title=dict(font=dict(size=15, color="#F8FAFC"), x=0, xanchor="left"),
+    paper_bgcolor="rgba(0,0,0,0)",
+    plot_bgcolor="rgba(0,0,0,0)",
+    colorway=["#22C55E", "#FCD34D", "#38BDF8", "#A78BFA", "#F472B6", "#FB923C", "#94A3B8"],
+    xaxis=dict(gridcolor="#1E293B", linecolor="#1E293B", zerolinecolor="#1E293B",
+               tickfont=dict(color="#94A3B8", size=11),
+               title=dict(font=dict(color="#94A3B8"))),
+    yaxis=dict(gridcolor="#1E293B", linecolor="#1E293B", zerolinecolor="#1E293B",
+               tickfont=dict(color="#94A3B8", size=11),
+               title=dict(font=dict(color="#94A3B8"))),
+    hoverlabel=dict(bgcolor="#101A30", bordercolor="#1E293B",
+                    font=dict(family="Inter", color="#F8FAFC", size=12)),
+    legend=dict(bgcolor="rgba(0,0,0,0)", bordercolor="rgba(0,0,0,0)",
+                font=dict(color="#E2E8F0", size=12)),
+    margin=dict(l=8, r=8, t=40, b=8),
+)
+pio.templates["gold_fintech"] = _GOLD_TEMPLATE
+pio.templates.default = "gold_fintech"
+
+# ── Hero block ───────────────────────────────────────────────
+st.markdown(
+    """
+    <div class="gold-hero">
+      <h1>Vietnamese Gold Price Forecasting <span class="accent">·</span> SJC</h1>
+      <p>Multi-horizon forecasts (h=1, 5, 20 trading days) across 24 classical, ML, deep-learning, and foundation models — evaluated with walk-forward CV and adaptive conformal prediction intervals.</p>
+      <div class="badge-row">
+        <span class="badge green">TDTU NCKH SV 2025-2026</span>
+        <span class="badge gold">24 models &middot; 108 features</span>
+        <span class="badge">Walk-forward CV &middot; 5 folds</span>
+        <span class="badge">Friedman p &lt; 0.001</span>
+      </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
 
@@ -84,7 +125,19 @@ def load_shap_top() -> pd.DataFrame:
 # ============================================================
 # SIDEBAR
 # ============================================================
-st.sidebar.header("⚙️ Settings")
+st.sidebar.markdown(
+    """
+    <div class="brand">
+      <span class="brand-logo">Au</span>
+      <span class="brand-text">
+        <span class="brand-name">GoldForecast</span>
+        <span class="brand-sub">TDTU NCKH 2025-26</span>
+      </span>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 features_df = load_features()
 summary_df = load_combined_summary()
 
@@ -95,38 +148,44 @@ if features_df.empty:
 date_min = pd.to_datetime(features_df["Date"]).min().date()
 date_max = pd.to_datetime(features_df["Date"]).max().date()
 
+st.sidebar.markdown('<div class="sidebar-section">Filters</div>', unsafe_allow_html=True)
+
 date_range = st.sidebar.date_input(
-    "📅 Hiển thị từ ngày",
+    "Khoảng thời gian",
     value=(max(date_min, date_max - pd.Timedelta(days=365 * 2)), date_max),
     min_value=date_min,
     max_value=date_max,
 )
 
 horizon = st.sidebar.selectbox(
-    "🎯 Horizon dự báo",
+    "Horizon dự báo",
     options=[1, 5, 20],
-    format_func=lambda h: f"h={h} ngày",
+    format_func=lambda h: f"h = {h} ngày",
 )
 
 available_models = sorted(summary_df["model"].unique()) if not summary_df.empty else []
 selected_models = st.sidebar.multiselect(
-    "🤖 Models để hiển thị (leaderboard)",
+    "Models hiển thị",
     options=available_models,
-    default=available_models,   # default = ALL 24 (was top-8 alphabetically)
+    default=available_models,
 )
 
-st.sidebar.markdown("---")
 st.sidebar.markdown(
-    "**Repo**: [twangnhat-05/NGHIENCUUKHOAHOC](https://github.com/twangnhat-05/NGHIENCUUKHOAHOC)\n\n"
-    "**Architect**: WangNhat (TDTU)"
+    """
+    <div class="sidebar-footer">
+      <a href="https://github.com/twangnhat-05/NGHIENCUUKHOAHOC" target="_blank">GitHub repo &nearr;</a><br/>
+      <span style="color:var(--muted-2);">Architect &middot; WangNhat (TDTU)</span>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
 
 # ============================================================
-# MAIN: 5 TABS (added 🔴 Live News in Phase 9)
+# MAIN: 5 TABS (added Live News in Phase 9)
 # ============================================================
 tab_overview, tab_leaderboard, tab_predict, tab_xai, tab_news = st.tabs(
-    ["📊 Overview", "🏆 Leaderboard", "📈 Predictions", "🔍 XAI / SHAP", "🔴 Live News"]
+    ["Overview", "Leaderboard", "Predictions", "XAI · SHAP", "Live News"]
 )
 
 
@@ -159,16 +218,25 @@ with tab_overview:
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # Stats cards
+    # Stats cards — short values to keep 4 cards visually balanced
     col1, col2, col3, col4 = st.columns(4)
     last = df_filt.iloc[-1] if len(df_filt) else None
     if last is not None:
-        col1.metric("Giá SJC cuối kỳ", f"{last['SJC_ban_ra']:.2f} triệu/lượng")
+        col1.metric(
+            "Giá SJC cuối kỳ (triệu/lượng)",
+            f"{last['SJC_ban_ra']:.2f}",
+        )
         prev_30 = df_filt.iloc[-30:]
         if len(prev_30) > 1:
             change = (prev_30["SJC_ban_ra"].iloc[-1] - prev_30["SJC_ban_ra"].iloc[0])
-            col2.metric("Thay đổi 30 ngày", f"{change:+.2f}",
-                        delta=f"{change / prev_30['SJC_ban_ra'].iloc[0] * 100:.2f}%")
+            pct = change / prev_30['SJC_ban_ra'].iloc[0] * 100
+            col2.metric(
+                "Thay đổi 30 ngày",
+                f"{change:+.2f}",
+                delta=f"{pct:+.2f}%",
+            )
+        else:
+            col2.metric("Thay đổi 30 ngày", "—")
         col3.metric("Số dòng dữ liệu", f"{len(df_filt):,}")
         col4.metric("Số features", f"{features_df.shape[1] - 4}")
 
@@ -203,12 +271,12 @@ with tab_leaderboard:
         sub = sub[["rank", "model", "mean", "std", "count"]]
         sub.columns = ["#", "Model", "Mean MAPE (%)", "Std", "Folds"]
 
-        # Highlight top 3
+        # Highlight top 3 — dark-theme variants
         def highlight_top(row):
             if row["#"] == 1:
-                return ["background-color: #d4edda"] * len(row)
+                return ["background-color: rgba(34,197,94,0.18); color: #BBF7D0"] * len(row)
             elif row["#"] in (2, 3):
-                return ["background-color: #fff3cd"] * len(row)
+                return ["background-color: rgba(252,211,77,0.12); color: #FDE68A"] * len(row)
             else:
                 return [""] * len(row)
 
@@ -413,7 +481,7 @@ with tab_xai:
 
 
 # ============================================================
-# TAB 5: 🔴 LIVE NEWS (Phase 9 — real-time gold-relevant news)
+# TAB 5: LIVE NEWS (Phase 9 — real-time gold-relevant news)
 # ============================================================
 with tab_news:
     st.subheader("🔴 Real-time gold-relevant news")
@@ -511,8 +579,12 @@ with tab_news:
         )
 
 
-st.markdown("---")
-st.caption(
-    "📄 [GitHub](https://github.com/twangnhat-05/NGHIENCUUKHOAHOC) | "
-    "🎓 TDTU NCKH SV 2025-2026"
+st.markdown(
+    """
+    <div class="gold-footer">
+      <span>TDTU NCKH SV 2025-2026 · Vietnamese Gold Price Forecasting</span>
+      <span><a href="https://github.com/twangnhat-05/NGHIENCUUKHOAHOC" target="_blank">GitHub repo ↗</a></span>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
