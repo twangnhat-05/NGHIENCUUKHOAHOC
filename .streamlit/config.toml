@@ -10,7 +10,7 @@ font = "sans serif"
 # the [theme.sidebar] config block — added in newer versions).
 
 [server]
-headless = false
+headless = true
 runOnSave = true
 fileWatcherType = "auto"
 
