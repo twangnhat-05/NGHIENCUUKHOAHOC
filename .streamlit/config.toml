@@ -6,10 +6,8 @@ secondaryBackgroundColor = "#101A30"
 textColor = "#F1F5F9"
 font = "sans serif"
 
-[theme.sidebar]
-backgroundColor = "#0A0F1E"
-secondaryBackgroundColor = "#101A30"
-textColor = "#F1F5F9"
+# Sidebar styling handled via theme.css (Streamlit 1.40 does not support
+# the [theme.sidebar] config block — added in newer versions).
 
 [server]
 headless = false
